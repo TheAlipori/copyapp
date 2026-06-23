@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+@theme {
+  --font-quicksand: 'Quicksand', sans-serif;
+  --color-marca-rojo: #BD1622;
+  --color-marca-azul: #1D70B7;
+  --color-marca-naranja: #F8B133;
+  --color-marca-verde: #1E8A4A;
+  --color-marca-gris: #64748B;
+}

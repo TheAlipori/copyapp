@@ -15,10 +15,20 @@ pnpm-debug.log*
 
 # environment variables
 .env
+.env.local
 .env.production
+
+# local SQLite files
+auth
+auth-wal
+auth-shm
+
+# Claude memory
+.claude/
 
 # macOS-specific files
 .DS_Store
 
 # jetbrains setting folder
 .idea/
+.vercel
