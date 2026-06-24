@@ -1,0 +1,278 @@
+---
+import { verifySession } from '../../lib/session';
+import { db } from '../../db';
+import { config_precios } from '../../db/schema';
+import { asc } from 'drizzle-orm';
+import AppHeader from '../../components/AppHeader.astro';
+import '../../styles/global.css';
+
+const session = await verifySession(Astro.cookies);
+if (!session || session.role !== 'admin') return Astro.redirect('/pos');
+
+const precios = await db.select().from(config_precios).orderBy(asc(config_precios.tipo), asc(config_precios.desde));
+
+const grupos: Record<string, typeof precios> = {};
+for (const p of precios) {
+  if (!grupos[p.tipo]) grupos[p.tipo] = [];
+  grupos[p.tipo].push(p);
+}
+
+const etiquetas: Record<string, string> = {
+  byn_carta:              'B/N Carta',
+  byn_oficio:             'B/N Oficio',
+  byn_media_carta:        'B/N Media Carta',
+  papel_especial_carta:   'Papel Especial Carta',
+  papel_especial_tabloide:'Papel Especial Tabloide',
+};
+---
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Precios — Copymax Admin</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Quicksand', sans-serif; background: #f5f4f0; min-height: 100svh; }
+
+    /* Layout */
+    main { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h1 { font-size: 1.5rem; font-weight: 700; color: #1a1a1a; margin-bottom: 0.25rem; }
+    .subtitle { color: #888; font-size: 0.875rem; font-weight: 500; margin-bottom: 2rem; }
+
+    /* Grupos */
+    .grupo { background: #fff; border-radius: 14px; border: 1px solid #e8e8e4; margin-bottom: 1.5rem; overflow: hidden; }
+    .grupo-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.25rem;
+      background: #f9f9f7;
+      border-bottom: 1px solid #e8e8e4;
+    }
+    .grupo-titulo { font-weight: 700; font-size: 0.95rem; color: #1a1a1a; }
+    .btn-agregar {
+      background: #1D70B7; color: #fff; border: none; border-radius: 8px;
+      padding: 0.4rem 0.9rem; font-family: 'Quicksand', sans-serif;
+      font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-agregar:hover { background: #1560a0; }
+
+    /* Tabla */
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      text-align: left; font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: #aaa; padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid #f0f0ec;
+    }
+    td { padding: 0.75rem 1.25rem; font-size: 0.875rem; color: #333; border-bottom: 1px solid #f5f5f2; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafaf8; }
+
+    .precio-cell { font-weight: 700; color: #1D70B7; }
+    .badge {
+      display: inline-block; font-size: 0.7rem; font-weight: 700;
+      padding: 0.15rem 0.5rem; border-radius: 999px;
+    }
+    .badge-si { background: #dcfce7; color: #166534; }
+    .badge-no { background: #f1f5f9; color: #94a3b8; }
+
+    /* Acciones inline */
+    .btn-edit {
+      background: none; border: 1px solid #e2e2dc; border-radius: 6px;
+      padding: 0.3rem 0.7rem; font-family: 'Quicksand', sans-serif;
+      font-size: 0.78rem; font-weight: 600; color: #555; cursor: pointer;
+      margin-right: 0.4rem;
+    }
+    .btn-edit:hover { border-color: #1D70B7; color: #1D70B7; }
+    .btn-del {
+      background: none; border: 1px solid #e2e2dc; border-radius: 6px;
+      padding: 0.3rem 0.7rem; font-family: 'Quicksand', sans-serif;
+      font-size: 0.78rem; font-weight: 600; color: #888; cursor: pointer;
+    }
+    .btn-del:hover { border-color: #BD1622; color: #BD1622; }
+
+    /* Modal */
+    .modal { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .modal.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 16px; padding: 1.75rem; width: 100%; max-width: 420px; }
+    .modal-box h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.25rem; color: #1a1a1a; }
+    .field { margin-bottom: 1rem; }
+    .field label { display: block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #666; margin-bottom: 0.4rem; }
+    .field input, .field select {
+      width: 100%; border: 1.5px solid #e2e2dc; border-radius: 8px;
+      padding: 0.65rem 0.9rem; font-family: 'Quicksand', sans-serif;
+      font-size: 0.9rem; font-weight: 500; color: #1a1a1a; outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: #1D70B7; box-shadow: 0 0 0 3px rgba(29,112,183,0.1); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem; }
+    .btn-cancel { background: none; border: 1.5px solid #e2e2dc; border-radius: 8px; padding: 0.6rem 1.2rem; font-family: 'Quicksand', sans-serif; font-size: 0.875rem; font-weight: 600; color: #666; cursor: pointer; }
+    .btn-save { background: #1D70B7; color: #fff; border: none; border-radius: 8px; padding: 0.6rem 1.4rem; font-family: 'Quicksand', sans-serif; font-size: 0.875rem; font-weight: 700; cursor: pointer; }
+    .btn-save:hover { background: #1560a0; }
+
+    .empty { padding: 1.5rem 1.25rem; color: #bbb; font-size: 0.875rem; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<AppHeader activePage="ajustes" username={session.username} role={session.role} />
+
+<main>
+  <h1>Configuración de precios</h1>
+  <p class="subtitle">Solo visible para administradores. Los cambios aplican de inmediato.</p>
+
+  {Object.entries(grupos).map(([tipo, filas]) => (
+    <div class="grupo" data-tipo={tipo}>
+      <div class="grupo-header">
+        <span class="grupo-titulo">{etiquetas[tipo] ?? tipo}</span>
+        <button class="btn-agregar" onclick={`abrirNuevo('${tipo}')`}>+ Agregar</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Desde</th>
+            <th>Hasta</th>
+            <th>Precio</th>
+            <th>Doble cara</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {filas.length === 0
+            ? <tr><td colspan="6" class="empty">Sin filas</td></tr>
+            : filas.map(p => (
+              <tr>
+                <td>{p.nombre}</td>
+                <td>{p.desde ?? '—'}</td>
+                <td>{p.hasta ?? '—'}</td>
+                <td class="precio-cell">${p.precio.toFixed(2)}</td>
+                <td><span class={`badge ${p.doble_cara ? 'badge-si' : 'badge-no'}`}>{p.doble_cara ? 'Sí' : 'No'}</span></td>
+                <td>
+                  <button class="btn-edit" onclick={`abrirEditar(${JSON.stringify(p)})`}>Editar</button>
+                  <button class="btn-del" onclick={`eliminar(${p.id})`}>Eliminar</button>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  ))}
+
+  {/* Si no hay ningún grupo todavía */}
+  {Object.keys(grupos).length === 0 && (
+    <div class="grupo">
+      <div class="empty" style="padding: 2rem;">No hay precios configurados. Usa "+ Agregar" en cada sección o recarga la página.</div>
+    </div>
+  )}
+</main>
+
+<!-- Modal editar/crear -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <h2 id="modal-titulo">Editar precio</h2>
+    <input type="hidden" id="f-id" />
+    <input type="hidden" id="f-tipo" />
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="f-nombre" placeholder="Ej: B/N Carta 1-49" />
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Desde (hojas)</label>
+        <input type="number" id="f-desde" min="1" placeholder="—" />
+      </div>
+      <div class="field">
+        <label>Hasta (hojas)</label>
+        <input type="number" id="f-hasta" min="1" placeholder="sin límite" />
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Precio ($)</label>
+        <input type="number" id="f-precio" min="0" step="0.01" placeholder="0.00" />
+      </div>
+      <div class="field">
+        <label>Doble cara</label>
+        <select id="f-doble">
+          <option value="0">No</option>
+          <option value="1">Sí</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // @ts-nocheck
+  function abrirNuevo(tipo: string) {
+    (document.getElementById('modal-titulo') as HTMLElement).textContent = 'Agregar precio';
+    (document.getElementById('f-id') as HTMLInputElement).value = '';
+    (document.getElementById('f-tipo') as HTMLInputElement).value = tipo;
+    (document.getElementById('f-nombre') as HTMLInputElement).value = '';
+    (document.getElementById('f-desde') as HTMLInputElement).value = '';
+    (document.getElementById('f-hasta') as HTMLInputElement).value = '';
+    (document.getElementById('f-precio') as HTMLInputElement).value = '';
+    (document.getElementById('f-doble') as HTMLSelectElement).value = '0';
+    document.getElementById('modal')!.classList.add('open');
+  }
+
+  function abrirEditar(p: any) {
+    (document.getElementById('modal-titulo') as HTMLElement).textContent = 'Editar precio';
+    (document.getElementById('f-id') as HTMLInputElement).value = p.id;
+    (document.getElementById('f-tipo') as HTMLInputElement).value = p.tipo;
+    (document.getElementById('f-nombre') as HTMLInputElement).value = p.nombre;
+    (document.getElementById('f-desde') as HTMLInputElement).value = p.desde ?? '';
+    (document.getElementById('f-hasta') as HTMLInputElement).value = p.hasta ?? '';
+    (document.getElementById('f-precio') as HTMLInputElement).value = p.precio;
+    (document.getElementById('f-doble') as HTMLSelectElement).value = String(p.doble_cara ?? 0);
+    document.getElementById('modal')!.classList.add('open');
+  }
+
+  function cerrarModal() {
+    document.getElementById('modal')!.classList.remove('open');
+  }
+
+  async function guardar() {
+    const id = (document.getElementById('f-id') as HTMLInputElement).value;
+    const body = {
+      tipo:       (document.getElementById('f-tipo') as HTMLInputElement).value,
+      nombre:     (document.getElementById('f-nombre') as HTMLInputElement).value.trim(),
+      desde:      (document.getElementById('f-desde') as HTMLInputElement).value ? parseInt((document.getElementById('f-desde') as HTMLInputElement).value) : null,
+      hasta:      (document.getElementById('f-hasta') as HTMLInputElement).value ? parseInt((document.getElementById('f-hasta') as HTMLInputElement).value) : null,
+      precio:     parseFloat((document.getElementById('f-precio') as HTMLInputElement).value),
+      doble_cara: parseInt((document.getElementById('f-doble') as HTMLSelectElement).value),
+    };
+
+    if (!body.nombre || isNaN(body.precio)) return alert('Completa nombre y precio.');
+
+    const url = id ? `/api/admin/precios/${id}` : '/api/admin/precios';
+    const method = id ? 'PATCH' : 'POST';
+
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (res.ok) { cerrarModal(); location.reload(); }
+    else alert('Error al guardar.');
+  }
+
+  async function eliminar(id: number) {
+    if (!confirm('¿Eliminar este precio?')) return;
+    const res = await fetch(`/api/admin/precios/${id}`, { method: 'DELETE' });
+    if (res.ok) location.reload();
+    else alert('Error al eliminar.');
+  }
+
+  // Cerrar modal al hacer clic fuera
+  document.getElementById('modal')!.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal')) cerrarModal();
+  });
+</script>
+
+</body>
+</html>

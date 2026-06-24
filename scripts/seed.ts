@@ -26,8 +26,12 @@ async function seed() {
     role: 'admin',
   }).onConflictDoNothing();
 
-  // Precios — se borran y reinsertan siempre para reflejar cambios
-  await db.delete(schema.config_precios);
+  // Precios — solo inserta si la tabla está vacía
+  const existingPrecios = await db.select().from(schema.config_precios).limit(1);
+  if (existingPrecios.length > 0) {
+    console.log('Precios ya existentes, omitiendo...');
+    process.exit(0);
+  }
   await db.insert(schema.config_precios).values([
     { tipo: 'byn_carta',       nombre: 'B/N Carta 1-49',              desde: 1,   hasta: 49,   precio: 1.00, doble_cara: 0 },
     { tipo: 'byn_carta',       nombre: 'B/N Carta 50-99',             desde: 50,  hasta: 99,   precio: 0.70, doble_cara: 0 },

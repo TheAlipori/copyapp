@@ -31,7 +31,7 @@ export const ventas = sqliteTable('ventas', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   folio: text('folio').notNull().unique(),
   total: real('total').notNull(),
-  metodo_pago: text('metodo_pago', { enum: ['efectivo', 'tarjeta', 'transferencia'] }).notNull(),
+  metodo_pago: text('metodo_pago', { enum: ['efectivo', 'transferencia'] }).notNull(),
   cobrado_por: text('cobrado_por').notNull(),
   created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
 });

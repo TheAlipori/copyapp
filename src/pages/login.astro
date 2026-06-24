@@ -1,8 +1,8 @@
 ---
 import { verifySession } from '../lib/session';
 import '../styles/global.css';
+import logoRaw from '../assets/isologo.svg?raw';
 
-// Si ya hay sesión, redirigir al POS
 const session = await verifySession(Astro.cookies);
 if (session) {
   return Astro.redirect('/pos');
@@ -16,55 +16,349 @@ const error = Astro.url.searchParams.get('error');
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Iniciar sesión — MDCopyCopymax</title>
+    <title>Copymax POS — Acceso</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Quicksand', sans-serif;
+        min-height: 100svh;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        background: #f5f4f0;
+      }
+
+      /* ── Panel izquierdo ── */
+      .brand-panel {
+        background: #1D70B7;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem 3.5rem;
+        overflow: hidden;
+      }
+
+      /* Patrón de puntos tipo papel */
+      .brand-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1.5px, transparent 1.5px);
+        background-size: 28px 28px;
+      }
+
+      .brand-logo {
+        width: 100%;
+        max-width: 320px;
+        margin-bottom: 2.5rem;
+        opacity: 1;
+      }
+
+      /* Círculo decorativo grande */
+      .brand-panel::after {
+        content: '';
+        position: absolute;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.1);
+        bottom: -120px;
+        right: -100px;
+      }
+
+      .brand-ring {
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(255,255,255,0.08);
+        top: -60px;
+        left: -60px;
+      }
+
+      .brand-content {
+        position: relative;
+        z-index: 1;
+      }
+
+      .brand-tag {
+        display: inline-block;
+        background: rgba(255,255,255,0.15);
+        color: rgba(255,255,255,0.9);
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        margin-bottom: 2rem;
+      }
+
+      .brand-name {
+        font-size: clamp(3rem, 5vw, 4.5rem);
+        font-weight: 700;
+        color: #fff;
+        line-height: 0.9;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-name span {
+        display: block;
+        font-size: clamp(1.1rem, 2vw, 1.4rem);
+        font-weight: 600;
+        letter-spacing: 0.18em;
+        color: rgba(255,255,255,0.65);
+        margin-top: 0.6rem;
+        text-transform: uppercase;
+      }
+
+      .brand-divider {
+        width: 48px;
+        height: 3px;
+        background: rgba(255,255,255,0.4);
+        border-radius: 2px;
+        margin: 2rem 0;
+      }
+
+      .brand-desc {
+        color: rgba(255,255,255,0.7);
+        font-size: 0.95rem;
+        font-weight: 500;
+        line-height: 1.6;
+        max-width: 280px;
+      }
+
+      /* Íconos decorativos (módulos del sistema) */
+      .brand-modules {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 2.5rem;
+      }
+
+      .brand-module {
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 10px;
+        padding: 0.6rem 1rem;
+        color: rgba(255,255,255,0.8);
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+      }
+
+      /* ── Panel derecho (formulario) ── */
+      .form-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 4rem 3.5rem;
+        background: #fafaf8;
+      }
+
+      .form-header {
+        margin-bottom: 2.5rem;
+      }
+
+      .form-header h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        letter-spacing: -0.02em;
+      }
+
+      .form-header p {
+        color: #888;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-top: 0.4rem;
+      }
+
+      .form-group {
+        margin-bottom: 1.25rem;
+      }
+
+      label {
+        display: block;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #555;
+        margin-bottom: 0.5rem;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        background: #fff;
+        border: 1.5px solid #e2e2dc;
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #1a1a1a;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+      }
+
+      input:focus {
+        border-color: #1D70B7;
+        box-shadow: 0 0 0 3px rgba(29, 112, 183, 0.15);
+      }
+
+      .btn-submit {
+        width: 100%;
+        margin-top: 0.5rem;
+        background: #1D70B7;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        font-family: 'Quicksand', sans-serif;
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.1s;
+      }
+
+      .btn-submit:hover { background: #1560a0; }
+      .btn-submit:active { transform: scale(0.99); }
+
+      .error-box {
+        background: #eff6ff;
+        border: 1.5px solid #bfdbfe;
+        border-left: 4px solid #1D70B7;
+        border-radius: 8px;
+        padding: 0.85rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1D70B7;
+        margin-bottom: 1.5rem;
+      }
+
+      .form-footer {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #ebebea;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #1E8A4A;
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
+      .form-footer span {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #aaa;
+        letter-spacing: 0.02em;
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 700px) {
+        body { grid-template-columns: 1fr; }
+        .brand-panel { padding: 3rem 2rem; min-height: 220px; justify-content: flex-end; }
+        .brand-name { font-size: 2.5rem; }
+        .brand-modules { display: none; }
+        .form-panel { padding: 2.5rem 2rem; }
+      }
+
+      /* Animación de entrada */
+      .brand-content { animation: fadeUp 0.6s ease both; }
+      .form-panel { animation: fadeUp 0.6s 0.1s ease both; }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+    </style>
   </head>
-  <body class="min-h-screen bg-gray-100 flex items-center justify-center">
-    <div class="bg-white rounded-2xl shadow-md p-8 w-full max-w-sm">
-      <h1 class="text-2xl font-bold text-gray-800 mb-1">MDCopyCopymax</h1>
-      <p class="text-sm text-gray-500 mb-6">Inicia sesión para continuar</p>
+  <body>
 
-      {error && (
-        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
-          {error === 'credenciales' ? 'Usuario o contraseña incorrectos.' : 'Error al iniciar sesión.'}
+    <!-- Panel izquierdo: marca -->
+    <aside class="brand-panel">
+      <div class="brand-ring"></div>
+      <div class="brand-content">
+        <div class="brand-logo" set:html={logoRaw} />
+        <span class="brand-tag">Sistema de punto de venta</span>
+        <h1 class="brand-name">
+          POS
+        </h1>
+        <div class="brand-divider"></div>
+        <p class="brand-desc">
+          Gestión de ventas, trabajos pendientes y recordatorios para Copymax.
+        </p>
+        <div class="brand-modules">
+          <span class="brand-module">Caja</span>
+          <span class="brand-module">Pendientes</span>
+          <span class="brand-module">Deudas</span>
         </div>
-      )}
+      </div>
+    </aside>
 
-      <form method="POST" action="/api/auth/login" class="space-y-4">
-        <div>
-          <label for="username" class="block text-sm font-medium text-gray-700 mb-1">
-            Usuario
-          </label>
-          <input
-            id="username"
-            name="username"
-            type="text"
-            required
-            autocomplete="username"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
-            Contraseña
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autocomplete="current-password"
-            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+    <!-- Panel derecho: formulario -->
+    <main class="form-panel">
+      <div style="max-width: 360px; width: 100%;">
+        <div class="form-header">
+          <h2>Bienvenido</h2>
+          <p>Ingresa tus credenciales para continuar</p>
         </div>
 
-        <button
-          type="submit"
-          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-2 text-sm transition-colors"
-        >
-          Entrar
-        </button>
-      </form>
-    </div>
+        {error && (
+          <div class="error-box">
+            {error === 'credenciales' ? 'Usuario o contraseña incorrectos.' : 'Error al iniciar sesión.'}
+          </div>
+        )}
+
+        <form method="POST" action="/api/auth/login">
+          <div class="form-group">
+            <label for="username">Usuario</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              required
+              autocomplete="username"
+              placeholder="tu usuario"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••"
+            />
+          </div>
+
+          <button type="submit" class="btn-submit">Entrar →</button>
+        </form>
+
+        <div class="form-footer">
+          <div class="status-dot"></div>
+          <span>Copymax POS · {new Date().getFullYear()} · Porilabs</span>
+        </div>
+      </div>
+    </main>
+
   </body>
 </html>

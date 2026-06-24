@@ -1,0 +1,69 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/isologo.svg';
+
+interface Props {
+  activePage: 'pos' | 'pendientes' | 'recordatorios' | 'ventas' | 'ajustes';
+  username: string;
+  role: string;
+}
+
+const { activePage, username, role } = Astro.props;
+
+const links = [
+  { href: '/pos',           label: 'Venta',          key: 'pos' },
+  { href: '/pendientes',    label: 'Pendientes',      key: 'pendientes' },
+  { href: '/ventas',        label: 'Historial',       key: 'ventas' },
+  { href: '/recordatorios', label: 'Recordatorios',   key: 'recordatorios' },
+];
+---
+
+<header class="bg-marca-azul shadow-md font-quicksand">
+  <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
+    <div class="flex items-center gap-6">
+      <Image src={logo} alt="Copymax" class="h-9 w-auto" />
+      <nav class="flex gap-1">
+        {links.map(link => (
+          <a
+            href={link.href}
+            class={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+              activePage === link.key
+                ? 'bg-white/20 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            {link.label}
+          </a>
+        ))}
+        {role === 'admin' && (
+          <a
+            href="/admin/precios"
+            class={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${
+              activePage === 'ajustes'
+                ? 'bg-white/20 text-white'
+                : 'text-white/70 hover:bg-white/10 hover:text-white'
+            }`}
+          >
+            Ajustes
+          </a>
+        )}
+      </nav>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="flex items-center gap-1.5 text-sm text-white/80">
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        {username}
+      </span>
+      <form method="POST" action="/api/auth/logout">
+        <button type="submit" class="flex items-center gap-1.5 text-sm font-medium bg-white/10 hover:bg-marca-rojo text-white px-3 py-1.5 rounded-md transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Salir
+        </button>
+      </form>
+    </div>
+  </div>
+</header>

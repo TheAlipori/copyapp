@@ -37,24 +37,30 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
   const total: number = items.reduce((s: number, i: any) => s + i.subtotal, 0);
 
-  const [venta] = await db
-    .insert(ventas)
-    .values({ folio, total, metodo_pago, cobrado_por: session.username })
-    .returning({ id: ventas.id });
+  try {
+    await db.transaction(async (tx) => {
+      const [venta] = await tx
+        .insert(ventas)
+        .values({ folio, total, metodo_pago, cobrado_por: session.username })
+        .returning({ id: ventas.id });
 
-  await db.insert(venta_items).values(
-    items.map((item: any) => ({
-      venta_id: venta.id,
-      tipo: item.tipo,
-      descripcion: item.descripcion,
-      cantidad: item.cantidad,
-      precio_unit: item.precio_unit,
-      subtotal: item.subtotal,
-      hojas: item.hojas ?? null,
-      doble_cara: item.doble_cara ?? 0,
-      papel_especial: item.papel_especial ?? null,
-    })),
-  );
+      await tx.insert(venta_items).values(
+        items.map((item: any) => ({
+          venta_id: venta.id,
+          tipo: item.tipo,
+          descripcion: item.descripcion,
+          cantidad: item.cantidad,
+          precio_unit: item.precio_unit,
+          subtotal: item.subtotal,
+          hojas: item.hojas ?? null,
+          doble_cara: item.doble_cara ?? 0,
+          papel_especial: item.papel_especial ?? null,
+        })),
+      );
+    });
+  } catch (e) {
+    return Response.json({ error: 'Error al guardar la venta' }, { status: 500 });
+  }
 
   return Response.json({ folio, total });
 };
