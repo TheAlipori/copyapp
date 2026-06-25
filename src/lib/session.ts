@@ -10,7 +10,7 @@ export interface SessionUser {
 }
 
 function getSecret(): string {
-  const secret = import.meta.env.SESSION_SECRET;
+  const secret = process.env.SESSION_SECRET ?? import.meta.env.SESSION_SECRET;
   if (!secret) throw new Error('SESSION_SECRET no definido');
   return secret;
 }
