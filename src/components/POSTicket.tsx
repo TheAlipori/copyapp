@@ -29,6 +29,7 @@ type Item = {
 };
 
 type Tab = 'byn' | 'color' | 'producto' | 'servicio';
+type Cliente = { id: number; nombre: string; rfc: string };
 
 
 function calcularPrecioImpresion(
@@ -79,10 +80,17 @@ export default function POSTicket() {
   const [tab, setTab] = useState<Tab>('byn');
   const [loading, setLoading] = useState(false);
   const [ultimoFolio, setUltimoFolio] = useState<string | null>(null);
-  const [ultimoTicket, setUltimoTicket] = useState<{ items: Item[]; total: number; metodo_pago: string } | null>(null);
+  const [ultimoTicket, setUltimoTicket] = useState<{ items: Item[]; total: number; metodo_pago: string; cliente_nombre: string; cliente_rfc: string } | null>(null);
   const [modalCobro, setModalCobro] = useState(false);
   const [pagaCon, setPagaCon] = useState('');
   const [preciosLoaded, setPreciosLoaded] = useState(false);
+
+  const [clienteNombre, setClienteNombre] = useState('Público General');
+  const [clienteRfc, setClienteRfc] = useState('XAXX010101000');
+  const [editandoCliente, setEditandoCliente] = useState(false);
+  const [clientesGuardados, setClientesGuardados] = useState<Cliente[]>([]);
+  const [busqueda, setBusqueda] = useState('');
+  const [modoSelector, setModoSelector] = useState<'cerrado' | 'lista' | 'manual'>('cerrado');
 
   // B/N form
   const [bynTipo, setBynTipo] = useState<'byn_carta' | 'byn_oficio' | 'byn_media_carta'>('byn_carta');
@@ -108,6 +116,7 @@ export default function POSTicket() {
       .then((r) => r.json())
       .then((data) => { setPrecios(data); setPreciosLoaded(true); });
     fetch('/api/pos/productos').then((r) => r.json()).then(setProductos);
+    fetch('/api/clientes').then((r) => r.json()).then(setClientesGuardados);
   }, []);
 
   const papelesCarta = precios
@@ -273,16 +282,23 @@ export default function POSTicket() {
         body: JSON.stringify({
           items: items.map(({ key, ...i }) => i),
           metodo_pago: metodoPago,
+          cliente_nombre: clienteNombre,
+          cliente_rfc: clienteRfc,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         setUltimoFolio(data.folio);
-        setUltimoTicket({ items: [...items], total, metodo_pago: metodoPago });
+        setUltimoTicket({ items: [...items], total, metodo_pago: metodoPago, cliente_nombre: clienteNombre, cliente_rfc: clienteRfc });
         setItems([]);
         setMetodoPago('');
         setModalCobro(false);
         setPagaCon('');
+        setClienteNombre('Público General');
+        setClienteRfc('XAXX010101000');
+        setEditandoCliente(false);
+        setModoSelector('cerrado');
+        setBusqueda('');
       } else {
         alert('Error al guardar la venta: ' + (data.error ?? 'desconocido'));
       }
@@ -296,7 +312,7 @@ export default function POSTicket() {
 
   function handleImprimir() {
     if (!ultimoTicket || !ultimoFolio) return;
-    const { items: ticketItems, total: ticketTotal, metodo_pago } = ultimoTicket;
+    const { items: ticketItems, total: ticketTotal, metodo_pago, cliente_nombre: cNombre, cliente_rfc: cRfc } = ultimoTicket;
     const fecha = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
     const metodoLabel: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia' };
     const cambioStr = metodo_pago === 'efectivo' && pagaConNum > 0 ? `$${(pagaConNum - ticketTotal).toFixed(2)}` : '—';
@@ -343,7 +359,9 @@ export default function POSTicket() {
     <hr/>
     <div class="folio">${ultimoFolio}</div>
     <div class="fecha">${fecha}</div>
-    <hr/>
+    ${cNombre !== 'Público General' ? `<div class="pago-row"><span>Cliente</span><span>${cNombre}</span></div>
+    <div class="pago-row" style="font-size:11px;color:#555"><span>RFC</span><span>${cRfc}</span></div>
+    <hr/>` : ''}
     ${ticketItems.map(i => `
       <div class="item">
         <div class="item-desc">${i.descripcion}</div>
@@ -645,6 +663,101 @@ export default function POSTicket() {
           <h2 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wide">
             Ticket
           </h2>
+
+          {/* Cliente */}
+          <div className="mb-3 border border-gray-100 rounded-lg bg-gray-50 overflow-hidden">
+            {/* Modo cerrado — muestra cliente actual */}
+            {modoSelector === 'cerrado' && (
+              <button type="button" onClick={() => setModoSelector(clientesGuardados.length ? 'lista' : 'manual')}
+                className="w-full text-left px-3 py-2 group">
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">Cliente</p>
+                <p className="text-sm font-semibold text-gray-800 group-hover:text-marca-azul transition-colors">{clienteNombre}</p>
+                <p className="text-xs font-mono text-gray-400">{clienteRfc}</p>
+              </button>
+            )}
+
+            {/* Modo lista — seleccionar cliente guardado */}
+            {modoSelector === 'lista' && (
+              <div className="p-2 space-y-2">
+                <input
+                  type="text"
+                  autoFocus
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar cliente..."
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-marca-azul"
+                />
+                <div className="max-h-36 overflow-y-auto space-y-1">
+                  {/* Público general siempre primero */}
+                  <button type="button"
+                    onClick={() => { setClienteNombre('Público General'); setClienteRfc('XAXX010101000'); setModoSelector('cerrado'); setBusqueda(''); }}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                      clienteNombre === 'Público General' ? 'bg-marca-azul text-white' : 'hover:bg-gray-100 text-gray-700'
+                    }`}>
+                    <span className="font-medium">Público General</span>
+                    <span className={`ml-2 text-xs font-mono ${clienteNombre === 'Público General' ? 'text-white/70' : 'text-gray-400'}`}>XAXX010101000</span>
+                  </button>
+                  {clientesGuardados
+                    .filter((c) => c.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+                    .map((c) => (
+                      <button key={c.id} type="button"
+                        onClick={() => { setClienteNombre(c.nombre); setClienteRfc(c.rfc); setModoSelector('cerrado'); setBusqueda(''); }}
+                        className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                          clienteNombre === c.nombre ? 'bg-marca-azul text-white' : 'hover:bg-gray-100 text-gray-700'
+                        }`}>
+                        <span className="font-medium">{c.nombre}</span>
+                        <span className={`ml-2 text-xs font-mono ${clienteNombre === c.nombre ? 'text-white/70' : 'text-gray-400'}`}>{c.rfc}</span>
+                      </button>
+                    ))
+                  }
+                </div>
+                <div className="flex gap-2 pt-1 border-t border-gray-200">
+                  <button type="button" onClick={() => setModoSelector('manual')}
+                    className="flex-1 text-xs text-marca-azul font-medium py-1 hover:underline">
+                    Ingresar manualmente
+                  </button>
+                  <button type="button" onClick={() => { setModoSelector('cerrado'); setBusqueda(''); }}
+                    className="text-xs text-gray-400 hover:text-gray-600 py-1 px-2">
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modo manual — entrada libre */}
+            {modoSelector === 'manual' && (
+              <div className="p-2 space-y-1.5">
+                <input
+                  type="text"
+                  autoFocus
+                  value={clienteNombre === 'Público General' ? '' : clienteNombre}
+                  onChange={(e) => setClienteNombre(e.target.value || 'Público General')}
+                  placeholder="Nombre del cliente"
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-marca-azul"
+                />
+                <input
+                  type="text"
+                  value={clienteRfc === 'XAXX010101000' ? '' : clienteRfc}
+                  onChange={(e) => setClienteRfc(e.target.value.toUpperCase() || 'XAXX010101000')}
+                  placeholder="RFC (opcional)"
+                  maxLength={13}
+                  className="w-full border border-gray-300 rounded-md px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-marca-azul"
+                />
+                <div className="flex gap-2 pt-1 border-t border-gray-200">
+                  <button type="button" onClick={() => setModoSelector('cerrado')}
+                    className="flex-1 text-xs text-white bg-marca-azul rounded-md py-1.5 font-medium">
+                    Listo
+                  </button>
+                  {clientesGuardados.length > 0 && (
+                    <button type="button" onClick={() => setModoSelector('lista')}
+                      className="text-xs text-gray-400 hover:text-gray-600 px-2">
+                      ← Lista
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Folio del último cobro */}
           {ultimoFolio && (

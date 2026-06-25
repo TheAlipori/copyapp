@@ -2,7 +2,7 @@
 import { verifySession } from '../lib/session';
 import { db } from '../db';
 import { ventas, venta_items } from '../db/schema';
-import { desc } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
 import AppHeader from '../components/AppHeader.astro';
 import '../styles/global.css';
 
@@ -14,9 +14,12 @@ const fechaParam = Astro.url.searchParams.get('fecha') ?? new Date().toISOString
 const todasVentas = await db.select().from(ventas).orderBy(desc(ventas.created_at)).limit(500);
 const ventasDia = todasVentas.filter((v) => v.created_at.startsWith(fechaParam));
 
-const todosItems = await db.select().from(venta_items);
-const itemsPorVenta: Record<number, typeof todosItems> = {};
-for (const item of todosItems) {
+const ids = ventasDia.map((v) => v.id);
+const itemsFiltrados = ids.length
+  ? await db.select().from(venta_items).where(inArray(venta_items.venta_id, ids))
+  : [];
+const itemsPorVenta: Record<number, typeof itemsFiltrados> = {};
+for (const item of itemsFiltrados) {
   if (!itemsPorVenta[item.venta_id]) itemsPorVenta[item.venta_id] = [];
   itemsPorVenta[item.venta_id].push(item);
 }
@@ -132,6 +135,8 @@ const metodoBadge: Record<string, string> = {
                 data-total={v.total}
                 data-metodo={v.metodo_pago}
                 data-fecha={v.created_at}
+                data-cliente={v.cliente_nombre}
+                data-rfc={v.cliente_rfc}
                 data-items={JSON.stringify((itemsPorVenta[v.id] ?? []).map(i => ({ descripcion: i.descripcion, subtotal: i.subtotal })))}
                 title="Imprimir ticket"
               >
@@ -190,6 +195,8 @@ const metodoBadge: Record<string, string> = {
         const total = parseFloat(el.dataset.total!);
         const metodo = el.dataset.metodo!;
         const fechaRaw = el.dataset.fecha!;
+        const clienteNombre = el.dataset.cliente ?? 'Público General';
+        const clienteRfc = el.dataset.rfc ?? 'XAXX010101000';
         const items: { descripcion: string; subtotal: number }[] = JSON.parse(el.dataset.items!);
 
         const fecha = new Date(fechaRaw + 'Z').toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
@@ -220,6 +227,7 @@ const metodoBadge: Record<string, string> = {
         <div class="folio">${folio}</div>
         <div class="fecha">${fecha}</div>
         <hr/>
+        ${clienteNombre !== 'Público General' ? `<div class="pago-row"><span>Cliente</span><span>${clienteNombre}</span></div><div class="pago-row" style="font-size:11px;color:#555"><span>RFC</span><span>${clienteRfc}</span></div><hr/>` : ''}
         ${items.map(i => `<div class="item"><div class="item-desc">${i.descripcion}</div><div class="item-price">$${i.subtotal.toFixed(2)}</div></div>`).join('')}
         <hr/>
         <div class="total-row"><span>TOTAL</span><span>$${total.toFixed(2)}</span></div>

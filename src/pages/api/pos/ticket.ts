@@ -8,14 +8,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   const session = await verifySession(cookies);
   if (!session) return new Response('Unauthorized', { status: 401 });
 
-  let body: { items: any[]; metodo_pago: string };
+  let body: { items: any[]; metodo_pago: string; cliente_nombre?: string; cliente_rfc?: string };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  const { items, metodo_pago } = body;
+  const { items, metodo_pago, cliente_nombre, cliente_rfc } = body;
 
   if (!items?.length || !metodo_pago) {
     return Response.json({ error: 'Datos incompletos' }, { status: 400 });
@@ -41,7 +41,14 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     await db.transaction(async (tx) => {
       const [venta] = await tx
         .insert(ventas)
-        .values({ folio, total, metodo_pago, cobrado_por: session.username })
+        .values({
+          folio,
+          total,
+          metodo_pago,
+          cobrado_por: session.username,
+          cliente_nombre: cliente_nombre?.trim() || 'Público General',
+          cliente_rfc: cliente_rfc?.trim().toUpperCase() || 'XAXX010101000',
+        })
         .returning({ id: ventas.id });
 
       await tx.insert(venta_items).values(

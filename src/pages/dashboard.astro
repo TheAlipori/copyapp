@@ -1,0 +1,256 @@
+---
+import { verifySession } from '../lib/session';
+import { db } from '../db';
+import { ventas, pendientes, deudas } from '../db/schema';
+import AppHeader from '../components/AppHeader.astro';
+import '../styles/global.css';
+
+const session = await verifySession(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+
+const hoy = new Date().toISOString().slice(0, 10);
+const hora = new Date().getHours();
+const saludo = hora < 12 ? 'Buenos días' : hora < 19 ? 'Buenas tardes' : 'Buenas noches';
+
+// --- Ventas ---
+const todasVentas = await db.select({
+  total: ventas.total,
+  metodo_pago: ventas.metodo_pago,
+  created_at: ventas.created_at,
+}).from(ventas);
+
+const ventasHoy = todasVentas.filter((v) => v.created_at.startsWith(hoy));
+const totalHoy = ventasHoy.reduce((s, v) => s + v.total, 0);
+const conteoHoy = ventasHoy.length;
+const efectivoHoy = ventasHoy.filter((v) => v.metodo_pago === 'efectivo').reduce((s, v) => s + v.total, 0);
+const transferenciaHoy = ventasHoy.filter((v) => v.metodo_pago === 'transferencia').reduce((s, v) => s + v.total, 0);
+
+// --- Gráfica 7 días ---
+const dias7: { label: string; total: number; esHoy: boolean }[] = [];
+for (let i = 6; i >= 0; i--) {
+  const d = new Date();
+  d.setDate(d.getDate() - i);
+  const fecha = d.toISOString().slice(0, 10);
+  const total = todasVentas.filter((v) => v.created_at.startsWith(fecha)).reduce((s, v) => s + v.total, 0);
+  const label = i === 0 ? 'Hoy' : d.toLocaleDateString('es-MX', { weekday: 'short' });
+  dias7.push({ label: label.charAt(0).toUpperCase() + label.slice(1), total, esHoy: i === 0 });
+}
+const maxVenta7 = Math.max(...dias7.map((d) => d.total), 1);
+const hayDatos7 = dias7.some((d) => d.total > 0);
+
+// --- Pendientes ---
+const todosPendientes = await db.select().from(pendientes);
+const activos = todosPendientes.filter((p) => p.status !== 'finalizado');
+const tomados = activos.filter((p) => p.status === 'tomado').length;
+const enCurso = activos.filter((p) => p.status === 'en_curso').length;
+
+const conFecha = activos
+  .filter((p) => p.fecha_entrega)
+  .sort((a, b) => new Date(a.fecha_entrega!).getTime() - new Date(b.fecha_entrega!).getTime());
+const proximo = conFecha[0] ?? null;
+
+function countdown(fecha: string | null) {
+  if (!fecha) return null;
+  const diff = new Date(fecha).getTime() - Date.now();
+  if (diff < 0) return { texto: 'Vencido', color: 'text-marca-rojo', bg: 'bg-red-50 border-red-200' };
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const texto = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  if (diff < 10800000) return { texto, color: 'text-marca-rojo', bg: 'bg-red-50 border-red-200' };
+  if (diff < 86400000) return { texto, color: 'text-marca-naranja', bg: 'bg-orange-50 border-orange-200' };
+  return { texto, color: 'text-green-600', bg: 'bg-green-50 border-green-200' };
+}
+const cd = proximo ? countdown(proximo.fecha_entrega) : null;
+
+// --- Deudas ---
+const todasDeudas = await db.select().from(deudas);
+const deudasVivas = todasDeudas.filter((d) => !d.pagado);
+const deudasCount = deudasVivas.length;
+const totalDeuda = deudasVivas.reduce((s, d) => s + d.monto, 0);
+
+const statusLabel: Record<string, string> = { tomado: 'Tomado', en_curso: 'En curso' };
+const statusColor: Record<string, string> = {
+  tomado: 'bg-gray-100 text-gray-600',
+  en_curso: 'bg-orange-100 text-orange-700',
+};
+---
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Copymax POS</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="min-h-screen bg-gray-100 font-quicksand">
+  <AppHeader activePage="dashboard" username={session.username} role={session.role} />
+
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-5">
+
+    <!-- Saludo -->
+    <div>
+      <h1 class="text-xl font-bold text-gray-800">{saludo}, {session.username}</h1>
+      <p class="text-sm text-gray-400">
+        {new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      </p>
+    </div>
+
+    <!-- Fila de stats -->
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+      <!-- Total hoy -->
+      <div class="bg-white rounded-xl shadow p-4 border-l-4 border-marca-azul">
+        <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Ventas hoy</p>
+        <p class="text-3xl font-bold text-gray-900">${totalHoy.toFixed(2)}</p>
+        <p class="text-xs text-gray-400 mt-1">{conteoHoy} venta{conteoHoy !== 1 ? 's' : ''}</p>
+      </div>
+
+      <!-- Efectivo -->
+      <div class="bg-white rounded-xl shadow p-4 border-l-4 border-green-500">
+        <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Efectivo</p>
+        <p class="text-3xl font-bold text-green-600">${efectivoHoy.toFixed(2)}</p>
+        <p class="text-xs text-gray-400 mt-1">en caja</p>
+      </div>
+
+      <!-- Transferencia -->
+      <div class="bg-white rounded-xl shadow p-4 border-l-4 border-purple-500">
+        <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Transferencia</p>
+        <p class="text-3xl font-bold text-purple-600">${transferenciaHoy.toFixed(2)}</p>
+        <p class="text-xs text-gray-400 mt-1">en digital</p>
+      </div>
+
+      <!-- Deudas -->
+      <a href="/recordatorios" class="bg-white rounded-xl shadow p-4 border-l-4 border-marca-naranja hover:shadow-md transition-shadow block">
+        <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Deudas activas</p>
+        <p class="text-3xl font-bold text-marca-naranja">{deudasCount}</p>
+        <p class="text-xs text-gray-400 mt-1">
+          {deudasCount > 0 ? `$${totalDeuda.toFixed(2)} pendiente` : 'Sin deudas'}
+        </p>
+      </a>
+    </div>
+
+    <!-- Gráfica 7 días -->
+    <div class="bg-white rounded-xl shadow p-5">
+      <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-4">Ventas — últimos 7 días</p>
+
+      {hayDatos7 ? (
+        <div class="flex items-end gap-2 h-28">
+          {dias7.map((dia) => {
+            const barH = Math.max(Math.round((dia.total / maxVenta7) * 96), dia.total > 0 ? 8 : 3);
+            return (
+              <div class="flex-1 flex flex-col items-center gap-1.5">
+                <span class="text-xs font-semibold text-gray-500">
+                  {dia.total > 0 ? `$${dia.total >= 1000 ? (dia.total/1000).toFixed(1)+'k' : dia.total.toFixed(0)}` : ''}
+                </span>
+                <div
+                  class={`w-full rounded-t-md transition-all ${dia.esHoy ? 'bg-marca-azul' : 'bg-blue-100'}`}
+                  style={`height: ${barH}px`}
+                />
+                <span class={`text-xs font-medium ${dia.esHoy ? 'text-marca-azul font-bold' : 'text-gray-400'}`}>
+                  {dia.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div class="h-28 flex items-center justify-center">
+          <p class="text-sm text-gray-300">Sin ventas en los últimos 7 días</p>
+        </div>
+      )}
+    </div>
+
+    <!-- Pendientes + Próxima entrega -->
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+      <!-- Pendientes activos -->
+      <div class="bg-white rounded-xl shadow p-5 flex flex-col justify-between">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Pendientes activos</p>
+          <p class="text-5xl font-bold text-gray-900 mb-4">{tomados + enCurso}</p>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-sm">
+              <span class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-marca-gris inline-block"></span>
+                Tomados
+              </span>
+              <span class="font-bold text-gray-700">{tomados}</span>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-marca-naranja inline-block"></span>
+                En curso
+              </span>
+              <span class="font-bold text-gray-700">{enCurso}</span>
+            </div>
+          </div>
+        </div>
+        <a href="/pendientes"
+          class="mt-5 w-full text-center bg-gray-50 hover:bg-marca-azul hover:text-white text-marca-azul text-sm font-semibold rounded-lg py-2 border border-gray-200 hover:border-marca-azul transition-colors">
+          Ver tablero →
+        </a>
+      </div>
+
+      <!-- Próxima entrega -->
+      <div class="bg-white rounded-xl shadow p-5">
+        <p class="text-xs font-bold uppercase tracking-wide text-gray-400 mb-3">Próxima entrega</p>
+
+        {!proximo && (
+          <div class="flex-1 flex flex-col items-center justify-center py-8 text-center">
+            <p class="text-3xl mb-2">✓</p>
+            <p class="text-sm font-semibold text-gray-500">Sin entregas próximas</p>
+            <p class="text-xs text-gray-400 mt-1">No hay pendientes con fecha asignada</p>
+          </div>
+        )}
+
+        {proximo && cd && (
+          <div class="space-y-3">
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="font-bold text-gray-900 text-lg">{proximo.folio}</span>
+                {proximo.nombre && <p class="text-sm text-gray-600 mt-0.5">{proximo.nombre}</p>}
+                <p class="text-xs text-gray-400">{proximo.whatsapp}</p>
+              </div>
+              <span class={`text-xs font-semibold px-2 py-1 rounded-full ${statusColor[proximo.status]}`}>
+                {statusLabel[proximo.status]}
+              </span>
+            </div>
+
+            {proximo.fecha_entrega && (
+              <div class="text-sm text-gray-500">
+                <span>
+                  {new Date(proximo.fecha_entrega).toLocaleString('es-MX', {
+                    weekday: 'short', day: 'numeric', month: 'short',
+                    hour: '2-digit', minute: '2-digit'
+                  })}
+                </span>
+              </div>
+            )}
+
+            <div class={`rounded-lg px-3 py-2 border text-sm font-bold flex items-center gap-2 ${cd.bg} ${cd.color}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {cd.texto}
+            </div>
+
+            {proximo.instrucciones_adicionales && (
+              <p class="text-xs text-gray-500 italic leading-snug line-clamp-2">
+                {proximo.instrucciones_adicionales}
+              </p>
+            )}
+
+            <a href="/pendientes"
+              class="block w-full text-center bg-gray-50 hover:bg-marca-azul hover:text-white text-marca-azul text-sm font-semibold rounded-lg py-2 border border-gray-200 hover:border-marca-azul transition-colors">
+              Ver pendientes →
+            </a>
+          </div>
+        )}
+      </div>
+
+    </div>
+  </main>
+</body>
+</html>

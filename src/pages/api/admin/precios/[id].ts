@@ -9,6 +9,7 @@ export const PATCH: APIRoute = async ({ params, request, cookies }) => {
   if (!session || session.role !== 'admin') return new Response('Forbidden', { status: 403 });
 
   const id = Number(params.id);
+  if (!id || isNaN(id)) return Response.json({ error: 'ID inválido' }, { status: 400 });
   let body: any;
   try { body = await request.json(); } catch { return Response.json({ error: 'JSON inválido' }, { status: 400 }); }
 
@@ -31,6 +32,7 @@ export const DELETE: APIRoute = async ({ params, cookies }) => {
   if (!session || session.role !== 'admin') return new Response('Forbidden', { status: 403 });
 
   const id = Number(params.id);
+  if (!id || isNaN(id)) return Response.json({ error: 'ID inválido' }, { status: 400 });
   await db.delete(config_precios).where(eq(config_precios.id, id));
   return new Response(null, { status: 204 });
 };

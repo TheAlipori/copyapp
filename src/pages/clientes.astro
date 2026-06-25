@@ -1,0 +1,30 @@
+---
+import { verifySession } from '../lib/session';
+import AppHeader from '../components/AppHeader.astro';
+import ClientesManager from '../components/ClientesManager';
+import '../styles/global.css';
+
+const session = await verifySession(Astro.cookies);
+if (!session) return Astro.redirect('/login');
+---
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clientes — Copymax POS</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+</head>
+<body class="min-h-screen bg-gray-100 font-quicksand">
+  <AppHeader activePage="clientes" username={session.username} role={session.role} />
+
+  <main class="max-w-5xl mx-auto px-4 py-6">
+    <div class="mb-5">
+      <h1 class="text-xl font-bold text-gray-800">Clientes</h1>
+      <p class="text-sm text-gray-500">Gestiona la lista de clientes frecuentes</p>
+    </div>
+    <ClientesManager client:load />
+  </main>
+</body>
+</html>

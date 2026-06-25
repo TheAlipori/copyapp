@@ -3,7 +3,7 @@ import { Image } from 'astro:assets';
 import logo from '../assets/isologo.svg';
 
 interface Props {
-  activePage: 'pos' | 'pendientes' | 'recordatorios' | 'ventas' | 'ajustes';
+  activePage: 'pos' | 'pendientes' | 'recordatorios' | 'ventas' | 'ajustes' | 'clientes' | 'dashboard';
   username: string;
   role: string;
 }
@@ -11,10 +11,12 @@ interface Props {
 const { activePage, username, role } = Astro.props;
 
 const links = [
-  { href: '/pos',           label: 'Venta',          key: 'pos' },
+  { href: '/dashboard',     label: 'Inicio',          key: 'dashboard' },
+  { href: '/pos',           label: 'Venta',           key: 'pos' },
   { href: '/pendientes',    label: 'Pendientes',      key: 'pendientes' },
   { href: '/ventas',        label: 'Historial',       key: 'ventas' },
-  { href: '/recordatorios', label: 'Recordatorios',   key: 'recordatorios' },
+  { href: '/clientes',      label: 'Clientes',        key: 'clientes' },
+  { href: '/recordatorios', label: 'Deudas',           key: 'recordatorios' },
 ];
 ---
 

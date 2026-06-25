@@ -30,6 +30,8 @@ export const config_precios = sqliteTable('config_precios', {
 export const ventas = sqliteTable('ventas', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   folio: text('folio').notNull().unique(),
+  cliente_nombre: text('cliente_nombre').notNull().default('Público General'),
+  cliente_rfc: text('cliente_rfc').notNull().default('XAXX010101000'),
   total: real('total').notNull(),
   metodo_pago: text('metodo_pago', { enum: ['efectivo', 'transferencia'] }).notNull(),
   cobrado_por: text('cobrado_por').notNull(),
@@ -76,6 +78,13 @@ export const recordatorios = sqliteTable('recordatorios', {
   texto: text('texto').notNull(),
   fecha: text('fecha'),
   completado: integer('completado').notNull().default(0),
+  created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
+});
+
+export const clientes = sqliteTable('clientes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  nombre: text('nombre').notNull(),
+  rfc: text('rfc').notNull().default('XAXX010101000'),
   created_at: text('created_at').notNull().default(sql`(datetime('now'))`),
 });
 

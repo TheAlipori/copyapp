@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, Timer, Settings, X, Receipt, Banknote, ArrowRight, Layers, Printer } from 'lucide-react';
+import { Calendar, Timer, Settings, X, Receipt, Banknote, ArrowRight, Layers, Printer, GripVertical } from 'lucide-react';
+import {
+  DndContext, DragOverlay, useDroppable, useDraggable,
+  PointerSensor, useSensors, useSensor,
+  type DragEndEvent, type DragStartEvent,
+} from '@dnd-kit/core';
 
 type Status = 'tomado' | 'en_curso' | 'finalizado';
 type EstadoPago = 'pendiente' | 'anticipo' | 'pagado';
@@ -71,14 +76,23 @@ export default function PendientesBoard({ username }: { username: string }) {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
   const [eForm, setEForm] = useState({ ...emptyForm });
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   const cargar = useCallback(async () => {
-    const res = await fetch('/api/pendientes');
-    if (res.ok) setPendientes(await res.json());
+    try {
+      const res = await fetch('/api/pendientes');
+      if (res.ok) setPendientes(await res.json());
+    } catch {}
   }, []);
 
   useEffect(() => {
     cargar();
+    const intervalo = setInterval(cargar, 4000);
+    return () => clearInterval(intervalo);
   }, [cargar]);
 
   function setF(field: string, value: any) {
@@ -115,6 +129,18 @@ export default function PendientesBoard({ username }: { username: string }) {
     if (!next[p.status]) return;
     const body: any = { status: next[p.status] };
     if (next[p.status] === 'finalizado') body.hecho_por = username;
+    await fetch(`/api/pendientes/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    cargar();
+  }
+
+  async function moverA(p: Pendiente, targetStatus: Status) {
+    if (p.status === targetStatus) return;
+    const body: any = { status: targetStatus };
+    if (targetStatus === 'finalizado') body.hecho_por = username;
     await fetch(`/api/pendientes/${p.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -174,6 +200,22 @@ export default function PendientesBoard({ username }: { username: string }) {
     cargar();
   }
 
+  function handleDragStart(event: DragStartEvent) {
+    setDraggingId(event.active.id as number);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setDraggingId(null);
+    const { active, over } = event;
+    if (!over) return;
+    const p = pendientes.find((x) => x.id === active.id);
+    if (!p) return;
+    const targetStatus = over.id as Status;
+    if (p.status !== targetStatus) moverA(p, targetStatus);
+  }
+
+  const draggingPendiente = draggingId != null ? pendientes.find((p) => p.id === draggingId) ?? null : null;
+
   return (
     <div className="flex flex-col gap-4 h-full">
       <div className="flex items-center justify-between">
@@ -184,18 +226,15 @@ export default function PendientesBoard({ username }: { username: string }) {
         </button>
       </div>
 
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
         {COLUMNAS.map(({ status, label, color }) => {
           const tarjetas = pendientes.filter((p) => p.status === status);
           return (
-            <div key={status} className="flex flex-col gap-2 overflow-hidden">
-              <div className={`bg-white rounded-xl border-t-4 ${color} shadow p-3`}>
-                <span className="text-sm font-semibold text-gray-700">{label}</span>
-                <span className="ml-2 text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">{tarjetas.length}</span>
-              </div>
+            <DroppableColumn key={status} status={status} label={label} color={color} count={tarjetas.length}>
               <div className="flex-1 overflow-y-auto space-y-2 pb-2">
                 {tarjetas.map((p) => (
-                  <Tarjeta key={p.id} p={p}
+                  <DraggableTarjeta key={p.id} p={p}
                     onAvanzar={() => avanzar(p)}
                     onEditar={() => abrirEditar(p)}
                     onEliminar={() => eliminar(p.id)} />
@@ -204,10 +243,19 @@ export default function PendientesBoard({ username }: { username: string }) {
                   <p className="text-xs text-gray-400 text-center pt-6">Sin trabajos</p>
                 )}
               </div>
-            </div>
+            </DroppableColumn>
           );
         })}
       </div>
+      <DragOverlay dropAnimation={null}>
+        {draggingPendiente ? (
+          <div className="rotate-1 opacity-90 shadow-2xl">
+            <Tarjeta p={draggingPendiente}
+              onAvanzar={() => {}} onEditar={() => {}} onEliminar={() => {}} />
+          </div>
+        ) : null}
+      </DragOverlay>
+      </DndContext>
 
       {/* Modal — Nuevo */}
       {showForm && (
@@ -454,8 +502,39 @@ function imprimirPendiente(p: Pendiente) {
   if (win) { win.document.write(html); win.document.close(); }
 }
 
-function Tarjeta({ p, onAvanzar, onEditar, onEliminar }: {
+function DroppableColumn({ status, label, color, count, children }: {
+  status: Status; label: string; color: string; count: number; children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  return (
+    <div ref={setNodeRef} className={`flex flex-col gap-2 overflow-hidden rounded-xl transition-colors ${isOver ? 'ring-2 ring-marca-azul ring-offset-2' : ''}`}>
+      <div className={`bg-white rounded-xl border-t-4 ${color} shadow p-3`}>
+        <span className="text-sm font-semibold text-gray-700">{label}</span>
+        <span className="ml-2 text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">{count}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function DraggableTarjeta({ p, onAvanzar, onEditar, onEliminar }: {
   p: Pendiente; onAvanzar: () => void; onEditar: () => void; onEliminar: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: p.id,
+    data: { p },
+  });
+  return (
+    <div ref={setNodeRef} className={isDragging ? 'opacity-30' : ''}>
+      <Tarjeta p={p} onAvanzar={onAvanzar} onEditar={onEditar} onEliminar={onEliminar}
+        dragHandleProps={{ ...attributes, ...listeners }} />
+    </div>
+  );
+}
+
+function Tarjeta({ p, onAvanzar, onEditar, onEliminar, dragHandleProps }: {
+  p: Pendiente; onAvanzar: () => void; onEditar: () => void; onEliminar: () => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }) {
   const siguiente = ({ tomado: 'Iniciar', en_curso: 'Finalizar', finalizado: null } as Record<Status, string | null>)[p.status];
   const countdown = p.status !== 'finalizado' ? getCountdown(p.fecha_entrega) : null;
@@ -479,7 +558,14 @@ function Tarjeta({ p, onAvanzar, onEditar, onEliminar }: {
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
       {/* Barra de color */}
       <div className={`${barColor} flex items-center justify-between px-3 py-1.5`}>
-        <span className="text-white text-xs font-bold tracking-wide">{p.folio}</span>
+        <div className="flex items-center gap-1.5">
+          {dragHandleProps && (
+            <span {...dragHandleProps} className="text-white/50 hover:text-white/80 cursor-grab active:cursor-grabbing touch-none">
+              <GripVertical size={14} />
+            </span>
+          )}
+          <span className="text-white text-xs font-bold tracking-wide">{p.folio}</span>
+        </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => imprimirPendiente(p)} title="Imprimir orden"
             className="text-white/70 hover:text-white transition-colors">

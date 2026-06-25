@@ -54,7 +54,10 @@ export async function verifySession(cookies: AstroCookies): Promise<SessionUser 
   const token = cookies.get(COOKIE_NAME)?.value;
   if (!token) return null;
 
-  const [encoded, sig] = token.split('.');
+  const dotIdx = token.lastIndexOf('.');
+  if (dotIdx < 1) return null;
+  const encoded = token.slice(0, dotIdx);
+  const sig = token.slice(dotIdx + 1);
   if (!encoded || !sig) return null;
 
   try {
