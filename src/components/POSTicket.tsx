@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 type Precio = {
   id: number;
@@ -30,6 +30,17 @@ type Item = {
 
 type Tab = 'byn' | 'color' | 'producto' | 'servicio';
 type Cliente = { id: number; nombre: string; rfc: string };
+
+function JuegosResumen({ hojas, juegos }: { hojas: string; juegos: string }) {
+  const h = parseInt(hojas) || 0;
+  const j = parseInt(juegos) || 1;
+  if (!hojas || !juegos || j <= 1) return null;
+  return (
+    <p className="text-xs text-gray-500">
+      Total: {h} páginas × {j} juegos = <strong>{h * j} impresiones</strong>
+    </p>
+  );
+}
 
 
 function calcularPrecioImpresion(
@@ -80,14 +91,14 @@ export default function POSTicket() {
   const [tab, setTab] = useState<Tab>('byn');
   const [loading, setLoading] = useState(false);
   const [ultimoFolio, setUltimoFolio] = useState<string | null>(null);
-  const [ultimoTicket, setUltimoTicket] = useState<{ items: Item[]; total: number; metodo_pago: string; cliente_nombre: string; cliente_rfc: string } | null>(null);
+  const [ultimoTicket, setUltimoTicket] = useState<{ items: Item[]; total: number; metodo_pago: string; cliente_nombre: string; cliente_rfc: string; pagaCon: string } | null>(null);
   const [modalCobro, setModalCobro] = useState(false);
   const [pagaCon, setPagaCon] = useState('');
   const [preciosLoaded, setPreciosLoaded] = useState(false);
 
   const [clienteNombre, setClienteNombre] = useState('Público General');
   const [clienteRfc, setClienteRfc] = useState('XAXX010101000');
-  const [editandoCliente, setEditandoCliente] = useState(false);
+  const [editandoCliente] = useState(false);
   const [clientesGuardados, setClientesGuardados] = useState<Cliente[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [modoSelector, setModoSelector] = useState<'cerrado' | 'lista' | 'manual'>('cerrado');
@@ -95,11 +106,13 @@ export default function POSTicket() {
   // B/N form
   const [bynTipo, setBynTipo] = useState<'byn_carta' | 'byn_oficio' | 'byn_media_carta'>('byn_carta');
   const [bynHojas, setBynHojas] = useState('');
+  const [bynJuegos, setBynJuegos] = useState('1');
   const [bynDobleCara, setBynDobleCara] = useState(false);
 
   // Color form
   const [colorTipo, setColorTipo] = useState<'color_carta' | 'color_tabloide'>('color_carta');
   const [colorHojas, setColorHojas] = useState('');
+  const [colorJuegos, setColorJuegos] = useState('1');
   const [colorPrecio, setColorPrecio] = useState('2');
   const [colorPapel, setColorPapel] = useState('');
 
@@ -114,9 +127,10 @@ export default function POSTicket() {
   useEffect(() => {
     fetch('/api/pos/precios')
       .then((r) => r.json())
-      .then((data) => { setPrecios(data); setPreciosLoaded(true); });
-    fetch('/api/pos/productos').then((r) => r.json()).then(setProductos);
-    fetch('/api/clientes').then((r) => r.json()).then(setClientesGuardados);
+      .then((data) => { setPrecios(data); setPreciosLoaded(true); })
+      .catch(() => setPreciosLoaded(false));
+    fetch('/api/pos/productos').then((r) => r.json()).then(setProductos).catch(() => {});
+    fetch('/api/clientes').then((r) => r.json()).then(setClientesGuardados).catch(() => {});
   }, []);
 
   const papelesCarta = precios
@@ -129,22 +143,24 @@ export default function POSTicket() {
 
   const total = items.reduce((s, i) => s + i.subtotal, 0);
 
-  const bynPreview = (() => {
+  const bynPreview = useMemo(() => {
     const h = parseInt(bynHojas);
+    const j = parseInt(bynJuegos) || 1;
     if (!h || h <= 0) return null;
-    const precio = calcularPrecioImpresion(bynTipo, h, bynDobleCara, precios);
+    const precio = calcularPrecioImpresion(bynTipo, h * j, bynDobleCara, precios);
     return precio > 0 ? precio : 'sin_precio';
-  })();
+  }, [bynHojas, bynJuegos, bynTipo, bynDobleCara, precios]);
 
-  const colorPreview = (() => {
+  const colorPreview = useMemo(() => {
     const h = parseInt(colorHojas);
+    const j = parseInt(colorJuegos) || 1;
     const pu = parseFloat(colorPrecio);
     if (!h || !pu) return null;
     const tipoPapel = colorTipo === 'color_carta' ? 'papel_especial_carta' : 'papel_especial_tabloide';
-    let p = h * pu;
-    if (colorPapel) p += calcularSurcharge(colorPapel, tipoPapel, h, precios);
+    let p = h * j * pu;
+    if (colorPapel) p += calcularSurcharge(colorPapel, tipoPapel, h * j, precios);
     return p;
-  })();
+  }, [colorHojas, colorJuegos, colorPrecio, colorPapel, colorTipo, precios]);
 
   function addItem(item: Omit<Item, 'key'>) {
     setItems((prev) => [...prev, { ...item, key: crypto.randomUUID() }]);
@@ -156,12 +172,15 @@ export default function POSTicket() {
 
   function handleAgregarByn() {
     const h = parseInt(bynHojas);
+    const j = parseInt(bynJuegos) || 1;
     if (!h || h <= 0) return;
     if (bynPreview === 'sin_precio') return;
 
+    const totalHojasNuevas = h * j;
     const dc = bynDobleCara ? 1 : 0;
     const tipoLabel = bynTipo === 'byn_carta' ? 'Carta' : bynTipo === 'byn_oficio' ? 'Oficio' : 'Media carta';
     const dcLabel = bynDobleCara ? ' doble cara' : '';
+    const juegosLabel = j > 1 ? ` × ${j} juegos` : '';
 
     setItems((prev) => {
       const idx = prev.findIndex(
@@ -169,68 +188,70 @@ export default function POSTicket() {
       );
 
       if (idx !== -1) {
-        // Fusionar: recalcular con total de hojas
-        const totalHojas = (prev[idx].hojas ?? 0) + h;
+        const totalHojas = (prev[idx].hojas ?? 0) + totalHojasNuevas;
         const nuevoSubtotal = calcularPrecioImpresion(bynTipo, totalHojas, bynDobleCara, precios);
-        const nuevoPrecioUnit = nuevoSubtotal / totalHojas;
-        const updated = [...prev];
-        updated[idx] = {
-          ...updated[idx],
-          hojas: totalHojas,
-          cantidad: totalHojas,
-          precio_unit: nuevoPrecioUnit,
-          subtotal: nuevoSubtotal,
-          descripcion: `Impresión B/N ${tipoLabel}${dcLabel} (${totalHojas} páginas)`,
-        };
-        return updated;
+        return prev.map((item, i) =>
+          i !== idx ? item : {
+            ...item,
+            hojas: totalHojas,
+            cantidad: totalHojas,
+            precio_unit: nuevoSubtotal / totalHojas,
+            subtotal: nuevoSubtotal,
+            descripcion: `Impresión B/N ${tipoLabel}${dcLabel} (${totalHojas} copias)`,
+          }
+        );
       }
 
       // No existe: agregar nuevo
-      const subtotal = calcularPrecioImpresion(bynTipo, h, bynDobleCara, precios);
+      const subtotal = calcularPrecioImpresion(bynTipo, totalHojasNuevas, bynDobleCara, precios);
       return [
         ...prev,
         {
           key: crypto.randomUUID(),
           tipo: bynTipo,
-          descripcion: `Impresión B/N ${tipoLabel}${dcLabel} (${h} páginas)`,
-          cantidad: h,
-          precio_unit: subtotal / h,
+          descripcion: `Impresión B/N ${tipoLabel}${dcLabel} (${h} págs${juegosLabel} = ${totalHojasNuevas} copias)`,
+          cantidad: totalHojasNuevas,
+          precio_unit: subtotal / totalHojasNuevas,
           subtotal,
-          hojas: h,
+          hojas: totalHojasNuevas,
           doble_cara: dc,
         },
       ];
     });
 
     setBynHojas('');
+    setBynJuegos('1');
     setBynDobleCara(false);
   }
 
   function handleAgregarColor() {
     const h = parseInt(colorHojas);
+    const j = parseInt(colorJuegos) || 1;
     const pu = parseFloat(colorPrecio);
     if (!h || !pu) return;
+    const totalHojas = h * j;
     const tipoPapel = colorTipo === 'color_carta' ? 'papel_especial_carta' : 'papel_especial_tabloide';
-    const surcharge = colorPapel ? calcularSurcharge(colorPapel, tipoPapel, h, precios) : 0;
-    const subtotal = h * pu + surcharge;
+    const surcharge = colorPapel ? calcularSurcharge(colorPapel, tipoPapel, totalHojas, precios) : 0;
+    const subtotal = totalHojas * pu + surcharge;
     const tipoLabel = colorTipo === 'color_carta' ? 'Carta' : 'Tabloide';
     const papelLabel = colorPapel ? ` + ${colorPapel}` : '';
-    const pagLabel = h === 1 ? 'página' : 'páginas';
-    const precioEfectivo = subtotal / h;
-    const desc = `Impresión Color ${tipoLabel}${papelLabel} (${h} ${pagLabel} @ $${precioEfectivo.toFixed(2)}/pág)`;
+    const juegosLabel = j > 1 ? ` × ${j} juegos` : '';
+    const precioEfectivo = subtotal / totalHojas;
+    const desc = `Impresión Color ${tipoLabel}${papelLabel} (${h} págs${juegosLabel} = ${totalHojas} copias @ $${precioEfectivo.toFixed(2)}/pág)`;
 
     addItem({
       tipo: 'color',
       descripcion: desc,
-      cantidad: h,
+      cantidad: totalHojas,
       precio_unit: pu,
       subtotal,
-      hojas: h,
+      hojas: totalHojas,
       papel_especial: colorPapel || undefined,
     });
 
     setColorTipo('color_carta');
     setColorHojas('');
+    setColorJuegos('1');
     setColorPapel('');
   }
 
@@ -289,7 +310,7 @@ export default function POSTicket() {
       const data = await res.json();
       if (res.ok) {
         setUltimoFolio(data.folio);
-        setUltimoTicket({ items: [...items], total, metodo_pago: metodoPago, cliente_nombre: clienteNombre, cliente_rfc: clienteRfc });
+        setUltimoTicket({ items: [...items], total, metodo_pago: metodoPago, cliente_nombre: clienteNombre, cliente_rfc: clienteRfc, pagaCon });
         setItems([]);
         setMetodoPago('');
         setModalCobro(false);
@@ -312,32 +333,33 @@ export default function POSTicket() {
 
   function handleImprimir() {
     if (!ultimoTicket || !ultimoFolio) return;
-    const { items: ticketItems, total: ticketTotal, metodo_pago, cliente_nombre: cNombre, cliente_rfc: cRfc } = ultimoTicket;
+    const { items: ticketItems, total: ticketTotal, metodo_pago, cliente_nombre: cNombre, cliente_rfc: cRfc, pagaCon: ticketPagaCon } = ultimoTicket;
+    const ticketPagaConNum = parseFloat(ticketPagaCon) || 0;
     const fecha = new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
     const metodoLabel: Record<string, string> = { efectivo: 'Efectivo', transferencia: 'Transferencia' };
-    const cambioStr = metodo_pago === 'efectivo' && pagaConNum > 0 ? `$${(pagaConNum - ticketTotal).toFixed(2)}` : '—';
-    const pagaConStr = metodo_pago === 'efectivo' && pagaConNum > 0 ? `$${pagaConNum.toFixed(2)}` : '—';
+    const cambioStr = metodo_pago === 'efectivo' && ticketPagaConNum > 0 ? `$${(ticketPagaConNum - ticketTotal).toFixed(2)}` : '—';
+    const pagaConStr = metodo_pago === 'efectivo' && ticketPagaConNum > 0 ? `$${ticketPagaConNum.toFixed(2)}` : '—';
 
     const html = `<!doctype html><html lang="es"><head><meta charset="UTF-8"/>
     <title>Ticket ${ultimoFolio}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: 'Courier New', monospace; font-size: 13px; width: 5.5in; padding: 0.4in; }
-      .sub { text-align: center; font-size: 11px; color: #555; margin-bottom: 4px; }
-      .folio { text-align: center; font-weight: bold; font-size: 15px; margin-bottom: 4px; }
-      .fecha { text-align: center; font-size: 11px; margin-bottom: 10px; }
+      body { font-family: 'Courier New', monospace; font-size: 20px; width: 5.5in; padding: 0.4in; }
+      .sub { text-align: center; font-size: 16px; color: #555; margin-bottom: 4px; }
+      .folio { text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 4px; }
+      .fecha { text-align: center; font-size: 16px; margin-bottom: 10px; }
       hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
       .item { display: flex; justify-content: space-between; margin-bottom: 5px; }
-      .item-desc { flex: 1; padding-right: 8px; font-size: 12px; }
-      .item-price { font-size: 12px; white-space: nowrap; }
-      .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; margin: 6px 0; }
-      .pago-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
-      .footer { text-align: center; font-size: 11px; margin-top: 14px; color: #555; }
+      .item-desc { flex: 1; padding-right: 8px; font-size: 19px; }
+      .item-price { font-size: 19px; white-space: nowrap; }
+      .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 28px; margin: 6px 0; }
+      .pago-row { display: flex; justify-content: space-between; font-size: 19px; margin: 3px 0; }
+      .footer { text-align: center; font-size: 16px; margin-top: 14px; color: #555; }
       @media print { @page { size: 5.5in 8.5in; margin: 0; } body { padding: 0.4in; } }
     </style></head><body>
     <div style="text-align:center;margin-bottom:6px;">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1119.76 216.34" style="width:160px;height:auto;display:inline-block;">
-        <defs><style>.t1{fill:#1d71b8}.t2{fill:#fff;stroke:#1d71b8;stroke-miterlimit:10;stroke-width:3px}.t3{fill:#fff}</style></defs>
+        <defs><style>.t1{fill:#000}.t2{fill:#fff;stroke:#000;stroke-miterlimit:10;stroke-width:3px}.t3{fill:#000}</style></defs>
         <g transform="translate(0 -8.21)">
           <path class="t1" d="M108.17,8.21A108.17,108.17,0,1,0,216.34,116.38,108.17,108.17,0,0,0,108.17,8.21ZM11,95.18C22,42.69,77.31-4.22,148.52,25.94c23.53,10,40.82,27.43,51.64,50.89a49.07,49.07,0,0,1,4.71,21.51c-2.59-1.21-4.61-2-6.47-3Q174.67,81.75,151,68.11c-12.81-7.35-26-13.67-40.87-15.63-15.45-2-29.14,2-41,12C55.51,76,47.36,90.91,42.35,107.81c-.92,3.11.91,3.83,2.95,4.83q35,17.25,69.93,34.54c.88.43,1.71,1,2.86,1.63-15.36,16.58-33.89,24-56,21.17C24.65,165.19,3,133.69,11,95.18Zm58.29,113A23.33,23.33,0,0,1,59,204.91c-19.28-11.71-33.06-28.43-42.9-48.59a10.2,10.2,0,0,1-.25-2.2A76.46,76.46,0,0,0,62.19,176.2c22.3,2.51,41.6-4.29,57-20.79,10.42-11.17,14.73-24.73,11.92-40-2.25-12.22-12.26-20.21-25.12-20.83-11.84-.58-24.06,7.59-27.24,18.2C96,99.52,105.47,98.18,116.31,107.5c8.61,7.42,10.58,20.57,4.58,31.79L52.48,106.17c7-30.21,38.26-53.41,69.41-42,12.16,4.46,20.8,13,27,24.22C172.1,130.18,153.32,182,108,201.3A85.1,85.1,0,0,1,69.33,208.13Zm62.15,5.68c-11.94,3.2-23.27,3.33-38.31.28,30.71-5.9,50.82-24.36,64.69-50.34,14.39-27,10.13-54.13-.94-81.67a21.19,21.19,0,0,1,3.08,1c14.67,8.07,29.37,16.1,43.94,24.36a6.54,6.54,0,0,1,3,4.58C208.35,160,177.46,201.53,131.48,213.81Z"/>
           <path class="t2" d="M131.48,213.81c-11.94,3.2-23.27,3.33-38.31.28,30.71-5.9,50.82-24.36,64.69-50.34,14.39-27,10.13-54.13-.94-81.67a21.19,21.19,0,0,1,3.08,1c14.67,8.07,29.37,16.1,43.94,24.36a6.54,6.54,0,0,1,3,4.58C208.35,160,177.46,201.53,131.48,213.81Z"/>
@@ -433,17 +455,32 @@ export default function POSTicket() {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-gray-600">Número de páginas</label>
-              <input
-                type="number"
-                min="1"
-                value={bynHojas}
-                onChange={(e) => setBynHojas(e.target.value)}
-                placeholder="ej: 50"
-                className={inputClass}
-              />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-gray-600">Páginas por juego</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={bynHojas}
+                  onChange={(e) => setBynHojas(e.target.value)}
+                  placeholder="ej: 100"
+                  className={inputClass}
+                />
+              </div>
+              <div className="w-24">
+                <label className="text-xs font-medium text-gray-600">Juegos</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={bynJuegos}
+                  onChange={(e) => setBynJuegos(e.target.value)}
+                  placeholder="1"
+                  className={inputClass}
+                />
+              </div>
             </div>
+
+            <JuegosResumen hojas={bynHojas} juegos={bynJuegos} />
 
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -498,17 +535,32 @@ export default function POSTicket() {
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-medium text-gray-600">Número de páginas</label>
-              <input
-                type="number"
-                min="1"
-                value={colorHojas}
-                onChange={(e) => setColorHojas(e.target.value)}
-                placeholder="ej: 10"
-                className={inputClass}
-              />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-xs font-medium text-gray-600">Páginas por juego</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={colorHojas}
+                  onChange={(e) => setColorHojas(e.target.value)}
+                  placeholder="ej: 10"
+                  className={inputClass}
+                />
+              </div>
+              <div className="w-24">
+                <label className="text-xs font-medium text-gray-600">Juegos</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={colorJuegos}
+                  onChange={(e) => setColorJuegos(e.target.value)}
+                  placeholder="1"
+                  className={inputClass}
+                />
+              </div>
             </div>
+
+            <JuegosResumen hojas={colorHojas} juegos={colorJuegos} />
 
             <div>
               <label className="text-xs font-medium text-gray-600">Precio por hoja</label>
