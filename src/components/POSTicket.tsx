@@ -98,7 +98,6 @@ export default function POSTicket() {
 
   const [clienteNombre, setClienteNombre] = useState('Público General');
   const [clienteRfc, setClienteRfc] = useState('XAXX010101000');
-  const [editandoCliente] = useState(false);
   const [clientesGuardados, setClientesGuardados] = useState<Cliente[]>([]);
   const [busqueda, setBusqueda] = useState('');
   const [modoSelector, setModoSelector] = useState<'cerrado' | 'lista' | 'manual'>('cerrado');
@@ -317,7 +316,6 @@ export default function POSTicket() {
         setPagaCon('');
         setClienteNombre('Público General');
         setClienteRfc('XAXX010101000');
-        setEditandoCliente(false);
         setModoSelector('cerrado');
         setBusqueda('');
       } else {
