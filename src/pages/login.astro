@@ -1,5 +1,9 @@
 ---
-import { verifySession } from '../lib/session';
+import { compare } from 'bcryptjs';
+import { eq } from 'drizzle-orm';
+import { verifySession, createSession } from '../lib/session';
+import { db } from '../db/index';
+import { usuarios } from '../db/schema';
 import '../styles/global.css';
 import logoRaw from '../assets/isologo.svg?raw';
 
@@ -8,7 +12,39 @@ if (session) {
   return Astro.redirect('/pos');
 }
 
-const error = Astro.url.searchParams.get('error');
+let error: string | null = Astro.url.searchParams.get('error');
+
+if (Astro.request.method === 'POST') {
+  try {
+    const form = await Astro.request.formData();
+    const username = String(form.get('username') ?? '').trim();
+    const password = String(form.get('password') ?? '');
+
+    if (!username || !password) {
+      error = 'credenciales';
+    } else {
+      const [user] = await db
+        .select()
+        .from(usuarios)
+        .where(eq(usuarios.username, username))
+        .limit(1);
+
+      if (!user) {
+        error = 'credenciales';
+      } else {
+        const valid = await compare(password, user.password_hash);
+        if (!valid) {
+          error = 'credenciales';
+        } else {
+          await createSession({ id: user.id, username: user.username, role: user.role }, Astro.cookies);
+          return Astro.redirect('/dashboard');
+        }
+      }
+    }
+  } catch (e) {
+    error = 'server';
+  }
+}
 ---
 
 <!doctype html>
@@ -321,11 +357,11 @@ const error = Astro.url.searchParams.get('error');
 
         {error && (
           <div class="error-box">
-            {error === 'credenciales' ? 'Usuario o contraseña incorrectos.' : 'Error al iniciar sesión.'}
+            {error === 'credenciales' ? 'Usuario o contraseña incorrectos.' : error === 'server' ? 'Error del servidor. Intenta de nuevo.' : 'Error al iniciar sesión.'}
           </div>
         )}
 
-        <form method="POST" action="/api/auth/login">
+        <form method="POST" action="/login">
           <div class="form-group">
             <label for="username">Usuario</label>
             <input
