@@ -2,12 +2,19 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 
-// process.env is read at runtime (not replaced by Vite at build time),
-// which avoids module-load crashes in Vercel when env vars are configured
-// after the first build.
-const client = createClient({
-  url: process.env.TURSO_DATABASE_URL ?? import.meta.env.TURSO_DATABASE_URL,
-  authToken: process.env.TURSO_AUTH_TOKEN ?? import.meta.env.TURSO_AUTH_TOKEN,
-});
+function getDb() {
+  const url = process.env.TURSO_DATABASE_URL ?? import.meta.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN ?? import.meta.env.TURSO_AUTH_TOKEN;
+  if (!url) throw new Error('TURSO_DATABASE_URL no definido');
+  const client = createClient({ url, authToken });
+  return drizzle(client, { schema });
+}
 
-export const db = drizzle(client, { schema });
+let _db: ReturnType<typeof getDb> | null = null;
+
+export const db = new Proxy({} as ReturnType<typeof getDb>, {
+  get(_, prop) {
+    if (!_db) _db = getDb();
+    return (_db as any)[prop];
+  },
+});
