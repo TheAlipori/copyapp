@@ -1,0 +1,10 @@
+---
+import { destroySession } from '../lib/session';
+
+if (Astro.request.method === 'POST') {
+  destroySession(Astro.cookies);
+  return Astro.redirect('/login');
+}
+
+return Astro.redirect('/login');
+---
