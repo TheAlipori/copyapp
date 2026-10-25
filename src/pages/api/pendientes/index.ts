@@ -55,6 +55,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       monto_anticipo: body.monto_anticipo ? parseFloat(body.monto_anticipo) : null,
       metodo_pago_pendiente: body.metodo_pago_pendiente || null,
       factura: body.factura ? 1 : 0,
+      dificil: body.dificil ? 1 : 0,
       tomado_por: session.username,
     })
     .returning();

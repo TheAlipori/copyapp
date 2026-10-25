@@ -65,6 +65,7 @@ export const pendientes = sqliteTable('pendientes', {
   monto_anticipo: real('monto_anticipo'),
   metodo_pago_pendiente: text('metodo_pago_pendiente', { enum: ['efectivo', 'transferencia'] }),
   factura: integer('factura').notNull().default(0),
+  dificil: integer('dificil').notNull().default(0),
   estado_pago: text('estado_pago', { enum: ['pendiente', 'anticipo', 'pagado'] }).notNull().default('pendiente'),
   status: text('status', { enum: ['tomado', 'en_curso', 'finalizado'] }).notNull().default('tomado'),
   tomado_por: text('tomado_por'),

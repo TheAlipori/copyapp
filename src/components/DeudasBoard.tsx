@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CheckCircle, Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 type Deuda = {
@@ -18,6 +18,8 @@ export default function DeudasBoard() {
   const [deudas, setDeudas] = useState<Deuda[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [mostrarPagadas, setMostrarPagadas] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Formulario
   const [clienteId, setClienteId] = useState('');
@@ -36,6 +38,12 @@ export default function DeudasBoard() {
     fetch('/api/deudas').then((r) => r.ok ? r.json() : []).then(setDeudas).catch(() => {});
     fetch('/api/clientes').then((r) => r.ok ? r.json() : []).then(setClientes).catch(() => {});
   }, []);
+
+  function mostrarToast(msg: string) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 2500);
+  }
 
   async function handleAgregar(e: { preventDefault(): void }) {
     e.preventDefault();
@@ -59,6 +67,7 @@ export default function DeudasBoard() {
       setClienteManual('');
       setConcepto('');
       setMonto('');
+      mostrarToast('Deuda registrada');
     } else {
       setError(data.error ?? 'Error al guardar');
     }
@@ -70,13 +79,17 @@ export default function DeudasBoard() {
     if (res.ok) {
       const updated = await res.json();
       setDeudas((prev) => prev.map((d) => (d.id === id ? updated : d)));
+      mostrarToast('Marcada como cobrada ✓');
     }
   }
 
   async function eliminar(id: number) {
     if (!confirm('¿Eliminar esta deuda?')) return;
     const res = await fetch(`/api/deudas/${id}`, { method: 'DELETE' });
-    if (res.ok) setDeudas((prev) => prev.filter((d) => d.id !== id));
+    if (res.ok) {
+      setDeudas((prev) => prev.filter((d) => d.id !== id));
+      mostrarToast('Deuda eliminada');
+    }
   }
 
   const pendientes = deudas.filter((d) => !d.pagado);
@@ -195,7 +208,7 @@ export default function DeudasBoard() {
                 <button
                   type="button"
                   onClick={() => marcarPagada(d.id)}
-                  title="Marcar como pagada"
+                  title="Marcar como cobrada"
                   className="text-gray-300 hover:text-marca-verde transition-colors p-1 shrink-0"
                 >
                   <CheckCircle size={20} />
@@ -250,6 +263,13 @@ export default function DeudasBoard() {
               ))}
             </ul>
           )}
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-sm font-medium px-4 py-2.5 rounded-lg shadow-xl z-50">
+          {toast}
         </div>
       )}
     </div>

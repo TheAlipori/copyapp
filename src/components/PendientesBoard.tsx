@@ -24,6 +24,7 @@ type Pendiente = {
   monto_anticipo: number | null;
   metodo_pago_pendiente: MetodoPago | null;
   factura: number;
+  dificil: number;
   estado_pago: EstadoPago;
   status: Status;
   tomado_por: string | null;
@@ -32,10 +33,15 @@ type Pendiente = {
 };
 
 const TIPOS_TRABAJO = [
-  { value: 'byn_carta',  label: 'B/N Carta' },
-  { value: 'byn_oficio', label: 'B/N Oficio' },
-  { value: 'color',      label: 'Color' },
-  { value: 'inyeccion',  label: 'Inyección de tinta' },
+  { value: 'byn_carta',       label: 'B/N Carta' },
+  { value: 'byn_oficio',      label: 'B/N Oficio' },
+  { value: 'color',           label: 'Color' },
+  { value: 'inyeccion',       label: 'Inyección de tinta' },
+  { value: 'enmicar',         label: 'Enmicar' },
+  { value: 'recortar',        label: 'Recortar' },
+  { value: 'disenar',         label: 'Diseñar' },
+  { value: 'acomodar',        label: 'Acomodar' },
+  { value: 'copia_manual',    label: 'Copia manual' },
 ];
 
 const COLUMNAS: { status: Status; label: string; color: string }[] = [
@@ -63,7 +69,7 @@ const emptyForm = {
   whatsapp: '', nombre: '', instrucciones_adicionales: '', fecha_entrega: '',
   tipos: [] as string[], juegos: '', copias_total: '',
   monto: '', monto_anticipo: '', metodo_pago_pendiente: '' as MetodoPago | '',
-  factura: false, estado_pago: 'pendiente' as EstadoPago,
+  factura: false, dificil: false, estado_pago: 'pendiente' as EstadoPago,
 };
 
 function tiposToString(tipos: string[]) { return tipos.join(','); }
@@ -77,6 +83,7 @@ export default function PendientesBoard({ username }: { username: string }) {
   const [form, setForm] = useState({ ...emptyForm });
   const [eForm, setEForm] = useState({ ...emptyForm });
   const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [mobileCol, setMobileCol] = useState<Status>('tomado');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -94,6 +101,17 @@ export default function PendientesBoard({ username }: { username: string }) {
     const intervalo = setInterval(cargar, 4000);
     return () => clearInterval(intervalo);
   }, [cargar]);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setShowForm(false);
+        setEditando(null);
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
 
   function setF(field: string, value: any) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -120,6 +138,7 @@ export default function PendientesBoard({ username }: { username: string }) {
       monto_anticipo: p.monto_anticipo != null ? String(p.monto_anticipo) : '',
       metodo_pago_pendiente: p.metodo_pago_pendiente ?? '',
       factura: p.factura === 1,
+      dificil: p.dificil === 1,
       estado_pago: p.estado_pago,
     });
   }
@@ -168,6 +187,7 @@ export default function PendientesBoard({ username }: { username: string }) {
       monto_anticipo: f.monto_anticipo ? parseFloat(f.monto_anticipo) : null,
       metodo_pago_pendiente: f.metodo_pago_pendiente || null,
       factura: f.factura,
+      dificil: f.dificil,
       estado_pago: f.estado_pago,
     };
   }
@@ -218,16 +238,45 @@ export default function PendientesBoard({ username }: { username: string }) {
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between shrink-0">
         <h1 className="font-bold text-gray-800 text-lg">Trabajos pendientes</h1>
         <button type="button" onClick={() => setShowForm(true)}
           className="bg-marca-azul hover:opacity-90 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-opacity">
-          + Nuevo pendiente
+          + Nuevo
         </button>
       </div>
 
+      {/* Tabs de columna — solo en móvil */}
+      <div className="md:hidden flex gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+        {COLUMNAS.map(({ status, label }) => {
+          const count = pendientes.filter((p) => p.status === status).length;
+          return (
+            <button key={status} type="button" onClick={() => setMobileCol(status)}
+              className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                mobileCol === status ? 'bg-white shadow text-gray-800' : 'text-gray-500'
+              }`}>
+              {label}{count > 0 ? ` (${count})` : ''}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Vista móvil: columna seleccionada */}
+      <div className="md:hidden flex-1 overflow-y-auto space-y-2 pb-2">
+        {pendientes.filter((p) => p.status === mobileCol).map((p) => (
+          <Tarjeta key={p.id} p={p}
+            onAvanzar={() => avanzar(p)}
+            onEditar={() => abrirEditar(p)}
+            onEliminar={() => eliminar(p.id)} />
+        ))}
+        {pendientes.filter((p) => p.status === mobileCol).length === 0 && (
+          <p className="text-xs text-gray-400 text-center pt-6">Sin trabajos</p>
+        )}
+      </div>
+
+      {/* Vista desktop: 3 columnas con drag & drop */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-3 gap-4 flex-1 overflow-hidden">
+      <div className="hidden md:grid md:grid-cols-3 gap-4 flex-1 overflow-hidden">
         {COLUMNAS.map(({ status, label, color }) => {
           const tarjetas = pendientes.filter((p) => p.status === status);
           return (
@@ -260,8 +309,13 @@ export default function PendientesBoard({ username }: { username: string }) {
       {/* Modal — Nuevo */}
       {showForm && (
         <div className="modal-overlay">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm p-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="font-bold text-gray-800 text-base mb-4">Nuevo pendiente</h2>
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-5 sm:p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-gray-800 text-base">Nuevo pendiente</h2>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
             <PendienteForm f={form} setF={setF} toggleTipo={(t) => setF('tipos', toggleTipo(form.tipos, t))}
               onSubmit={handleCrear} onCancel={() => setShowForm(false)} saving={saving} />
           </div>
@@ -271,11 +325,16 @@ export default function PendientesBoard({ username }: { username: string }) {
       {/* Modal — Editar */}
       {editando && (
         <div className="modal-overlay">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-sm p-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="font-bold text-gray-800 text-base mb-1">Editar pendiente</h2>
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-md p-5 sm:p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-bold text-gray-800 text-base">Editar pendiente</h2>
+              <button type="button" onClick={() => setEditando(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
             <p className="text-xs text-gray-400 mb-4">{editando.folio}</p>
             <PendienteForm f={eForm} setF={setE} toggleTipo={(t) => setE('tipos', toggleTipo(eForm.tipos, t))}
-              onSubmit={handleGuardarEdicion} onCancel={() => setEditando(null)} saving={saving} showEstadoPago />
+              onSubmit={handleGuardarEdicion} onCancel={() => setEditando(null)} saving={saving} />
           </div>
         </div>
       )}
@@ -285,7 +344,7 @@ export default function PendientesBoard({ username }: { username: string }) {
 
 // Formulario reutilizable para crear y editar
 function PendienteForm({
-  f, setF, toggleTipo, onSubmit, onCancel, saving, showEstadoPago = false,
+  f, setF, toggleTipo, onSubmit, onCancel, saving,
 }: {
   f: ReturnType<typeof Object.assign<typeof emptyForm, {}>>;
   setF: (field: string, value: any) => void;
@@ -293,7 +352,6 @@ function PendienteForm({
   onSubmit: (e: { preventDefault(): void }) => void;
   onCancel: () => void;
   saving: boolean;
-  showEstadoPago?: boolean;
 }) {
   const restante =
     f.monto && f.monto_anticipo
@@ -391,34 +449,36 @@ function PendienteForm({
         </div>
       </div>
 
-      {/* Factura + Estado pago */}
+      {/* Factura + Difícil */}
       <div className="flex items-center gap-4">
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={f.factura} onChange={(e) => setF('factura', e.target.checked)} className="rounded" />
           <span className="text-sm text-gray-700">Factura</span>
         </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={f.dificil} onChange={(e) => setF('dificil', e.target.checked)} className="rounded accent-marca-naranja" />
+          <span className="text-sm text-gray-700 font-medium">Difícil</span>
+        </label>
       </div>
 
-      {/* Estado de pago — solo en edición */}
-      {showEstadoPago && (
-        <div>
-          <label className="text-xs font-medium text-gray-600">Estado de pago</label>
-          <div className="flex gap-2 mt-1">
-            {(['pendiente', 'anticipo', 'pagado'] as EstadoPago[]).map((ep) => (
-              <button key={ep} type="button" onClick={() => setF('estado_pago', ep)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
-                  f.estado_pago === ep
-                    ? ep === 'pagado' ? 'bg-green-500 border-green-500 text-white'
-                      : ep === 'anticipo' ? 'bg-marca-naranja border-marca-naranja text-white'
-                      : 'bg-gray-400 border-gray-400 text-white'
-                    : 'border-gray-300 text-gray-500 hover:border-gray-400'
-                }`}>
-                {ep === 'pendiente' ? 'Sin pagar' : ep === 'anticipo' ? 'Anticipo' : 'Pagado'}
-              </button>
-            ))}
-          </div>
+      {/* Estado de pago */}
+      <div>
+        <label className="text-xs font-medium text-gray-600">Estado de pago</label>
+        <div className="flex gap-2 mt-1">
+          {(['pendiente', 'anticipo', 'pagado'] as EstadoPago[]).map((ep) => (
+            <button key={ep} type="button" onClick={() => setF('estado_pago', ep)}
+              className={`flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                f.estado_pago === ep
+                  ? ep === 'pagado' ? 'bg-green-500 border-green-500 text-white'
+                    : ep === 'anticipo' ? 'bg-marca-naranja border-marca-naranja text-white'
+                    : 'bg-gray-400 border-gray-400 text-white'
+                  : 'border-gray-300 text-gray-500 hover:border-gray-400'
+              }`}>
+              {ep === 'pendiente' ? 'Sin pagar' : ep === 'anticipo' ? 'Anticipo' : 'Pagado'}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Instrucciones adicionales */}
       <div>
@@ -470,7 +530,10 @@ function imprimirPendiente(p: Pendiente) {
     .join(', ');
   const fechaRegistro = new Date(p.created_at + 'Z').toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
   const fechaEntrega = p.fecha_entrega
-    ? new Date(p.fecha_entrega).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+    ? new Date(p.fecha_entrega).toLocaleString('es-MX', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
     : '—';
   const estadoPagoLabel = { pendiente: 'Sin pagar', anticipo: 'Anticipo', pagado: 'Pagado' }[p.estado_pago];
   const restante = p.monto != null && p.monto_anticipo != null ? p.monto - p.monto_anticipo : null;
@@ -584,6 +647,9 @@ function Tarjeta({ p, onAvanzar, onEditar, onEliminar, dragHandleProps }: {
             </span>
           )}
           <span className="text-white text-xs font-bold tracking-wide">{p.folio}</span>
+          {p.dificil === 1 && (
+            <span className="bg-marca-naranja text-white text-xs font-bold px-1.5 py-0.5 rounded leading-none">!</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => imprimirPendiente(p)} title="Imprimir orden"

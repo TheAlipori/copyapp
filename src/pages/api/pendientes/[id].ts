@@ -34,6 +34,7 @@ export const PATCH: APIRoute = async ({ request, cookies, params }) => {
   if ('monto_anticipo' in body) updates.monto_anticipo = body.monto_anticipo;
   if ('metodo_pago_pendiente' in body) updates.metodo_pago_pendiente = body.metodo_pago_pendiente;
   if ('factura' in body) updates.factura = body.factura ? 1 : 0;
+  if ('dificil' in body) updates.dificil = body.dificil ? 1 : 0;
 
   const [updated] = await db
     .update(pendientes)

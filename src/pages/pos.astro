@@ -16,10 +16,10 @@ if (!session) return Astro.redirect('/login');
     <title>Venta — Copymax POS</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
-  <body class="min-h-screen bg-gray-100">
+  <body class="h-screen flex flex-col bg-gray-100">
     <AppHeader activePage="pos" username={session.username} role={session.role} />
 
-    <main class="max-w-7xl mx-auto px-4 py-4" style="height: calc(100vh - 57px);">
+    <main class="flex-1 min-h-0 max-w-7xl mx-auto w-full px-3 sm:px-4 py-3 sm:py-4">
       <POSTicket client:load />
     </main>
   </body>

@@ -91,6 +91,7 @@ export default function POSTicket() {
   const [tab, setTab] = useState<Tab>('byn');
   const [loading, setLoading] = useState(false);
   const [ultimoFolio, setUltimoFolio] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<'form' | 'ticket'>('form');
   const [ultimoTicket, setUltimoTicket] = useState<{ items: Item[]; total: number; metodo_pago: string; cliente_nombre: string; cliente_rfc: string; pagaCon: string } | null>(null);
   const [modalCobro, setModalCobro] = useState(false);
   const [pagaCon, setPagaCon] = useState('');
@@ -163,6 +164,7 @@ export default function POSTicket() {
 
   function addItem(item: Omit<Item, 'key'>) {
     setItems((prev) => [...prev, { ...item, key: crypto.randomUUID() }]);
+    if (window.innerWidth < 768) setMobileView('ticket');
   }
 
   function removeItem(key: string) {
@@ -404,8 +406,8 @@ export default function POSTicket() {
   }
 
   const tabClass = (t: Tab) =>
-    `flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
-      tab === t ? 'bg-white shadow text-[#1D70B7]' : 'text-gray-500 hover:text-gray-700'
+    `flex-1 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
+      tab === t ? 'bg-white shadow text-marca-azul' : 'text-gray-500 hover:text-gray-700'
     }`;
 
   const btnPrimary =
@@ -418,17 +420,44 @@ export default function POSTicket() {
 
   return (
     <>
-    <div className="flex gap-4 h-full">
+    <div className="flex flex-col md:flex-row gap-3 sm:gap-4 h-full">
+
+      {/* Toggle de vista en móvil */}
+      <div className="md:hidden flex gap-1 bg-gray-200 rounded-lg p-1 shrink-0">
+        <button
+          type="button"
+          onClick={() => setMobileView('form')}
+          className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            mobileView === 'form' ? 'bg-white shadow text-marca-azul' : 'text-gray-500'
+          }`}
+        >
+          Agregar
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView('ticket')}
+          className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            mobileView === 'ticket' ? 'bg-white shadow text-marca-azul' : 'text-gray-500'
+          }`}
+        >
+          Ticket{items.length > 0 ? ` (${items.length})` : ''}
+          {total > 0 && mobileView !== 'ticket' && (
+            <span className="ml-1 text-xs font-bold text-marca-naranja">${total.toFixed(0)}</span>
+          )}
+        </button>
+      </div>
+
       {/* LEFT — Agregar ítems */}
-      <div className="flex-1 bg-white rounded-xl shadow p-4 flex flex-col">
+      <div className={`flex-1 bg-white rounded-xl shadow p-4 flex flex-col min-h-0 ${mobileView === 'ticket' ? 'hidden md:flex' : ''}`}>
         {/* Tabs */}
-        <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1">
+        <div className="flex gap-1 mb-4 bg-gray-100 rounded-lg p-1 shrink-0">
           {(['byn', 'color', 'producto', 'servicio'] as Tab[]).map((t) => (
             <button type="button" key={t} onClick={() => setTab(t)} className={tabClass(t)}>
               {t === 'byn' ? 'B/N' : t === 'color' ? 'Color' : t === 'producto' ? 'Producto' : 'Servicio'}
             </button>
           ))}
         </div>
+        <div className="flex-1 overflow-y-auto">
 
         {/* B/N */}
         {tab === 'byn' && (
@@ -705,10 +734,11 @@ export default function POSTicket() {
             </button>
           </div>
         )}
+        </div>{/* fin scroll */}
       </div>
 
       {/* RIGHT — Ticket */}
-      <div className="w-80 flex flex-col">
+      <div className={`w-full md:w-80 flex flex-col min-h-0 ${mobileView === 'form' ? 'hidden md:flex' : ''}`}>
         <div className="bg-white rounded-xl shadow p-4 flex flex-col h-full">
           <h2 className="font-bold text-gray-800 mb-3 text-sm uppercase tracking-wide">
             Ticket

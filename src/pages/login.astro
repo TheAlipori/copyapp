@@ -308,10 +308,19 @@ if (Astro.request.method === 'POST') {
       /* ── Responsive ── */
       @media (max-width: 700px) {
         body { grid-template-columns: 1fr; }
-        .brand-panel { padding: 3rem 2rem; min-height: 220px; justify-content: flex-end; }
-        .brand-name { font-size: 2.5rem; }
+        .brand-panel { padding: 1.75rem 1.5rem; min-height: 160px; justify-content: flex-end; }
+        .brand-name { font-size: 2rem; }
+        .brand-divider { margin: 1rem 0; }
+        .brand-desc { display: none; }
         .brand-modules { display: none; }
-        .form-panel { padding: 2.5rem 2rem; }
+        .form-panel { padding: 2rem 1.5rem; }
+        .form-header { margin-bottom: 1.5rem; }
+      }
+
+      @media (max-width: 400px) {
+        .brand-panel { min-height: 130px; padding: 1.25rem 1.25rem; }
+        .brand-tag { margin-bottom: 0.75rem; }
+        .form-panel { padding: 1.5rem 1.25rem; }
       }
 
       /* Animación de entrada */
