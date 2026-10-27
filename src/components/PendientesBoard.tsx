@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, Timer, Settings, X, Receipt, Banknote, ArrowRight, Layers, Printer, GripVertical, Copy, Check } from 'lucide-react';
+import { Calendar, Timer, Settings, X, Receipt, Banknote, ArrowRight, Layers, Printer, GripVertical, Copy, Check, User, MessageSquare } from 'lucide-react';
 import {
   DndContext, DragOverlay, useDroppable, useDraggable,
   PointerSensor, useSensors, useSensor,
@@ -503,31 +503,7 @@ function PendienteForm({
   );
 }
 
-function CopyWhatsApp({ numero }: { numero: string }) {
-  const [copiado, setCopiado] = useState(false);
-  function copiar() {
-    navigator.clipboard.writeText(numero).then(() => {
-      setCopiado(true);
-      setTimeout(() => setCopiado(false), 2000);
-    });
-  }
-  return (
-    <div className="flex items-center gap-1.5">
-      <p className="font-semibold text-gray-800 text-base leading-tight">{numero}</p>
-      <button type="button" onClick={copiar} title="Copiar número"
-        className="text-gray-400 hover:text-gray-600 transition-colors">
-        {copiado ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-      </button>
-      <a href={`https://wa.me/52${numero}`} target="_blank" rel="noopener noreferrer"
-        title="Abrir en WhatsApp"
-        className="text-gray-400 hover:text-green-500 transition-colors">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-        </svg>
-      </a>
-    </div>
-  );
-}
+const WA_SVG_PATH = "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z";
 
 const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1119.76 216.34" style="width:180px;height:auto;display:inline-block;"><defs><style>.t1{fill:#000}.t2{fill:#fff;stroke:#000;stroke-miterlimit:10;stroke-width:3px}.t3{fill:#000}</style></defs><g transform="translate(0 -8.21)"><path class="t1" d="M108.17,8.21A108.17,108.17,0,1,0,216.34,116.38,108.17,108.17,0,0,0,108.17,8.21ZM11,95.18C22,42.69,77.31-4.22,148.52,25.94c23.53,10,40.82,27.43,51.64,50.89a49.07,49.07,0,0,1,4.71,21.51c-2.59-1.21-4.61-2-6.47-3Q174.67,81.75,151,68.11c-12.81-7.35-26-13.67-40.87-15.63-15.45-2-29.14,2-41,12C55.51,76,47.36,90.91,42.35,107.81c-.92,3.11.91,3.83,2.95,4.83q35,17.25,69.93,34.54c.88.43,1.71,1,2.86,1.63-15.36,16.58-33.89,24-56,21.17C24.65,165.19,3,133.69,11,95.18Zm58.29,113A23.33,23.33,0,0,1,59,204.91c-19.28-11.71-33.06-28.43-42.9-48.59a10.2,10.2,0,0,1-.25-2.2A76.46,76.46,0,0,0,62.19,176.2c22.3,2.51,41.6-4.29,57-20.79,10.42-11.17,14.73-24.73,11.92-40-2.25-12.22-12.26-20.21-25.12-20.83-11.84-.58-24.06,7.59-27.24,18.2C96,99.52,105.47,98.18,116.31,107.5c8.61,7.42,10.58,20.57,4.58,31.79L52.48,106.17c7-30.21,38.26-53.41,69.41-42,12.16,4.46,20.8,13,27,24.22C172.1,130.18,153.32,182,108,201.3A85.1,85.1,0,0,1,69.33,208.13Zm62.15,5.68c-11.94,3.2-23.27,3.33-38.31.28,30.71-5.9,50.82-24.36,64.69-50.34,14.39-27,10.13-54.13-.94-81.67a21.19,21.19,0,0,1,3.08,1c14.67,8.07,29.37,16.1,43.94,24.36a6.54,6.54,0,0,1,3,4.58C208.35,160,177.46,201.53,131.48,213.81Z"/><path class="t2" d="M131.48,213.81c-11.94,3.2-23.27,3.33-38.31.28,30.71-5.9,50.82-24.36,64.69-50.34,14.39-27,10.13-54.13-.94-81.67a21.19,21.19,0,0,1,3.08,1c14.67,8.07,29.37,16.1,43.94,24.36a6.54,6.54,0,0,1,3,4.58C208.35,160,177.46,201.53,131.48,213.81Z"/><path class="t2" d="M108,201.3a85.1,85.1,0,0,1-38.7,6.83A23.33,23.33,0,0,1,59,204.91c-19.28-11.71-33.06-28.43-42.9-48.59a10.2,10.2,0,0,1-.25-2.2A76.46,76.46,0,0,0,62.19,176.2c22.3,2.51,41.6-4.29,57-20.79,10.42-11.17,14.73-24.73,11.92-40-2.25-12.22-12.26-20.21-25.12-20.83-11.84-.58-24.06,7.59-27.24,18.2C96,99.52,105.47,98.18,116.31,107.5c8.61,7.42,10.58,20.57,4.58,31.79L52.48,106.17c7-30.21,38.26-53.41,69.41-42,12.16,4.46,20.8,13,27,24.22C172.1,130.18,153.32,182,108,201.3Z"/><path class="t3" d="M204.87,98.34c-2.59-1.21-4.61-2-6.47-3Q174.67,81.75,151,68.11c-12.81-7.35-26-13.67-40.87-15.63-15.45-2-29.14,2-41,12C55.51,76,47.36,90.91,42.35,107.81c-.92,3.11.91,3.83,2.95,4.83q35,17.25,69.93,34.54c.88.43,1.71,1,2.86,1.63-15.36,16.58-33.89,24-56,21.17C24.65,165.19,3,133.69,11,95.18,22,42.69,77.31-4.22,148.52,25.94c23.53,10,40.82,27.43,51.64,50.89A49.07,49.07,0,0,1,204.87,98.34Z"/><path class="t3" d="M301.47,61.2a73.68,73.68,0,0,1,20,2.41Q330,66,334.68,70.33a13.54,13.54,0,0,1,4.71,10.34A13,13,0,0,1,337,88.19a8,8,0,0,1-7,3.51,13.64,13.64,0,0,1-5.32-.9,13.83,13.83,0,0,1-3.71-2.31,21.36,21.36,0,0,0-3.81-2.61A18.49,18.49,0,0,0,311,84a40.46,40.46,0,0,0-6.12-.71q-10.23,0-17.36,4.42a29.38,29.38,0,0,0-10.94,11.94A37.88,37.88,0,0,0,272.77,117a36.74,36.74,0,0,0,3.91,17.16,30.57,30.57,0,0,0,10.84,11.94,29.06,29.06,0,0,0,16,4.42,53.38,53.38,0,0,0,8.63-.61,21.37,21.37,0,0,0,6-1.8,37.6,37.6,0,0,0,5-3.41q2.21-1.81,6.62-1.81c3.48,0,6.15,1.1,8,3.31a12.16,12.16,0,0,1,2.81,8.13q0,5-5.62,9.13a45.23,45.23,0,0,1-14.75,6.62,74.53,74.53,0,0,1-19.77,2.51q-15.85,0-27.49-7.33a48.94,48.94,0,0,1-18-20,62.45,62.45,0,0,1-6.32-28.3q0-16.44,6.72-29a49.88,49.88,0,0,1,18.67-19.67Q286,61.21,301.47,61.2Z"/><path class="t3" d="M462.19,117q0,16.47-7.32,29a52.57,52.57,0,0,1-19.66,19.56,57.67,57.67,0,0,1-55.19,0A52.57,52.57,0,0,1,360.36,146Q353,133.44,353,117t7.33-29A53.38,53.38,0,0,1,380,68.32a57,57,0,0,1,55.19,0A53.38,53.38,0,0,1,454.87,88Q462.19,100.53,462.19,117Zm-24.07,0A36.45,36.45,0,0,0,434,99.23a30.61,30.61,0,0,0-11-11.74,30,30,0,0,0-30.71,0,30.61,30.61,0,0,0-11,11.74A36.34,36.34,0,0,0,377.11,117a35.91,35.91,0,0,0,4.12,17.56,30.61,30.61,0,0,0,11,11.74,30,30,0,0,0,30.71,0,30.61,30.61,0,0,0,11-11.74A36,36,0,0,0,438.12,117Z"/><path class="t3" d="M538.85,61.2A45.79,45.79,0,0,1,564,68.32a50.66,50.66,0,0,1,17.66,19.57q6.51,12.44,6.52,28.89t-6.52,29a50.92,50.92,0,0,1-17.46,19.66,44,44,0,0,1-24.58,7.13,42.85,42.85,0,0,1-15-2.61,48,48,0,0,1-12.34-6.62,38,38,0,0,1-8.23-8.13q-2.91-4.11-2.91-6.92l6.22-2.61v52.77a12,12,0,0,1-3.41,8.73,11.52,11.52,0,0,1-8.63,3.51,11.68,11.68,0,0,1-8.63-3.41,11.94,11.94,0,0,1-3.41-8.83v-123a12,12,0,0,1,3.41-8.73,12.36,12.36,0,0,1,17.26,0,12,12,0,0,1,3.41,8.73v9.83l-3.41-1.81q0-2.59,2.81-6.32a40.72,40.72,0,0,1,7.63-7.42,43.13,43.13,0,0,1,11.13-6.12A37.09,37.09,0,0,1,538.85,61.2Zm-3,22.07a27.21,27.21,0,0,0-15.45,4.42,29.93,29.93,0,0,0-10.34,11.94,38.16,38.16,0,0,0-3.71,17.15,39,39,0,0,0,3.71,17.16,29.66,29.66,0,0,0,10.34,12.14,27.21,27.21,0,0,0,15.45,4.42,26.77,26.77,0,0,0,15.35-4.42,30,30,0,0,0,10.23-12.14,39,39,0,0,0,3.71-17.16,38.16,38.16,0,0,0-3.71-17.15,30.3,30.3,0,0,0-10.23-11.94A26.77,26.77,0,0,0,535.84,83.27Z"/><path class="t3" d="M688.94,63.21a11.53,11.53,0,0,1,8.63,3.51A12,12,0,0,1,701,75.45v85.28q0,18.47-6.92,29.4a39.42,39.42,0,0,1-18.56,15.75,67.68,67.68,0,0,1-26.09,4.81,99.32,99.32,0,0,1-13.65-1,45.86,45.86,0,0,1-11.83-3q-6-2.61-8.33-6.52a9.86,9.86,0,0,1-.91-8.33q1.81-5.82,5.82-7.92a10,10,0,0,1,8.43-.51q3.21,1,8.43,3.11a31.87,31.87,0,0,0,12,2.11q9.23,0,15.35-2.51a17.71,17.71,0,0,0,9.23-8.43q3.1-5.91,3.11-16.15V148.09l4.21,4.81a35,35,0,0,1-8.52,10.94,34.67,34.67,0,0,1-12.14,6.52,53.66,53.66,0,0,1-16.06,2.21A34.46,34.46,0,0,1,626,167.65,33.37,33.37,0,0,1,613.69,154a43.7,43.7,0,0,1-4.41-20V75.45a12,12,0,0,1,3.41-8.73,12.35,12.35,0,0,1,17.25,0,12,12,0,0,1,3.42,8.73v51.37q0,13,5.72,18.36T655,150.5a23.91,23.91,0,0,0,11.84-2.71,18,18,0,0,0,7.42-8,29.15,29.15,0,0,0,2.61-12.94V75.45a12,12,0,0,1,3.41-8.73A11.52,11.52,0,0,1,688.94,63.21Z"/><path class="t3" d="M783.45,61.2q16,0,23.68,7.73t10,20l-3.41-1.8,1.61-3.21a45.94,45.94,0,0,1,7.42-9.94,45.39,45.39,0,0,1,12.14-9,34,34,0,0,1,16-3.71q14.45,0,22,6.22A31.62,31.62,0,0,1,883.18,84,87.6,87.6,0,0,1,886,107v51.37a12,12,0,0,1-3.41,8.73,12.36,12.36,0,0,1-17.26,0,12,12,0,0,1-3.41-8.73V107A41.31,41.31,0,0,0,860.3,95a16.38,16.38,0,0,0-5.82-8.53c-2.8-2.13-6.82-3.21-12-3.21a25.24,25.24,0,0,0-13,3.21A20.82,20.82,0,0,0,821.27,95a26,26,0,0,0-2.7,11.94v51.37a12,12,0,0,1-3.42,8.73,12.35,12.35,0,0,1-17.25,0,12,12,0,0,1-3.41-8.73V107A41.31,41.31,0,0,0,792.88,95a16.38,16.38,0,0,0-5.82-8.53c-2.81-2.13-6.82-3.21-12-3.21a25.24,25.24,0,0,0-13,3.21A20.82,20.82,0,0,0,753.85,95,26,26,0,0,0,751.14,107v51.37a12,12,0,0,1-3.41,8.73,12.35,12.35,0,0,1-17.25,0,12,12,0,0,1-3.42-8.73V75.45a12,12,0,0,1,3.42-8.73,12.35,12.35,0,0,1,17.25,0,12,12,0,0,1,3.41,8.73v8.63l-3-.61a45.59,45.59,0,0,1,5-7.32A43.14,43.14,0,0,1,761,68.83a41.25,41.25,0,0,1,10.23-5.52A34.47,34.47,0,0,1,783.45,61.2Z"/><path class="t3" d="M1000,61.2a11.7,11.7,0,0,1,8.62,3.41,11.94,11.94,0,0,1,3.41,8.83v84.88a12,12,0,0,1-3.41,8.73,12.35,12.35,0,0,1-17.25,0,12,12,0,0,1-3.41-8.73v-9.83l4.41,1.8c0,1.75-.94,3.85-2.81,6.33a38.32,38.32,0,0,1-7.62,7.32,46.94,46.94,0,0,1-11.34,6.12,39.17,39.17,0,0,1-14.15,2.51,45.86,45.86,0,0,1-25.08-7.13,50.07,50.07,0,0,1-17.76-19.66q-6.52-12.54-6.52-28.8,0-16.44,6.52-29a50.7,50.7,0,0,1,17.56-19.67,44.23,44.23,0,0,1,24.48-7.12,46.36,46.36,0,0,1,15.85,2.61A47.4,47.4,0,0,1,984,70.43a38,38,0,0,1,8.23,8.13q2.91,4.11,2.91,6.92l-7.22,2.61V73.44a12,12,0,0,1,3.41-8.73A11.5,11.5,0,0,1,1000,61.2Zm-40.54,89.3a27.21,27.21,0,0,0,15.45-4.42,29.76,29.76,0,0,0,10.34-12A38.51,38.51,0,0,0,988.93,117a39,39,0,0,0-3.71-17.25,29.82,29.82,0,0,0-10.34-12,27.21,27.21,0,0,0-15.45-4.42,26.9,26.9,0,0,0-15.25,4.42,29.8,29.8,0,0,0-10.33,12A38.81,38.81,0,0,0,930.13,117,38.38,38.38,0,0,0,933.85,134a29.74,29.74,0,0,0,10.33,12A26.9,26.9,0,0,0,959.43,150.5Z"/><path class="t3" d="M1040.3,63.21a12.18,12.18,0,0,1,9.83,5l67,83.28a11.16,11.16,0,0,1,2.61,7.22,11.48,11.48,0,0,1-3.81,8.63,12,12,0,0,1-8.43,3.61q-5.82,0-9.83-5.21l-67-83.28a11.63,11.63,0,0,1,1.11-15.85A12.21,12.21,0,0,1,1040.3,63.21Zm.2,107.55a12.65,12.65,0,0,1-7.93-3.11,9.31,9.31,0,0,1-3.91-7.52,11.74,11.74,0,0,1,3-7.63l30.7-37.52,12,20.06-24.28,30.71A11.63,11.63,0,0,1,1040.5,170.76Zm66.82-107.55a11,11,0,0,1,8.12,3.31,10.36,10.36,0,0,1,3.32,7.52,13.67,13.67,0,0,1-.61,4,10.11,10.11,0,0,1-2.2,3.81l-30.3,36.92L1073,101.33l24.69-32.71Q1101.69,63.21,1107.32,63.21Z"/></g></svg>`;
 
@@ -625,10 +601,18 @@ function Tarjeta({ p, onAvanzar, onEditar, onEliminar, dragHandleProps }: {
   p: Pendiente; onAvanzar: () => void; onEditar: () => void; onEliminar: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }) {
-  const siguiente = ({ tomado: 'Iniciar', en_curso: 'Finalizar', finalizado: null } as Record<Status, string | null>)[p.status];
+  const [waCopiado, setWaCopiado] = useState(false);
+  const siguiente = ({ tomado: 'Iniciar trabajo', en_curso: 'Marcar finalizado', finalizado: null } as Record<Status, string | null>)[p.status];
   const countdown = p.status !== 'finalizado' ? getCountdown(p.fecha_entrega) : null;
   const tipos = stringToTipos(p.tipo_trabajo);
   const restante = p.monto != null && p.monto_anticipo != null ? p.monto - p.monto_anticipo : null;
+
+  function copiarWA() {
+    navigator.clipboard.writeText(p.whatsapp).then(() => {
+      setWaCopiado(true);
+      setTimeout(() => setWaCopiado(false), 2000);
+    });
+  }
 
   const barColor = {
     tomado:     'bg-marca-gris',
@@ -636,16 +620,26 @@ function Tarjeta({ p, onAvanzar, onEditar, onEliminar, dragHandleProps }: {
     finalizado: 'bg-marca-verde',
   }[p.status];
 
+  const countdownPillCls = countdown
+    ? countdown.color === 'text-marca-rojo'    ? 'bg-red-50 text-red-700 border border-red-200'
+    : countdown.color === 'text-marca-naranja' ? 'bg-orange-50 text-orange-700 border border-orange-200'
+    : 'bg-green-50 text-green-700 border border-green-200'
+    : '';
+
   const estadoBadge = {
-    pendiente: 'border-gray-300 text-gray-500',
-    anticipo: 'bg-marca-naranja border-marca-naranja text-white',
-    pagado: 'bg-green-500 border-green-500 text-white',
+    pendiente: 'bg-gray-100 border-gray-200 text-gray-500',
+    anticipo:  'bg-orange-100 border-orange-200 text-orange-700',
+    pagado:    'bg-green-100 border-green-200 text-green-700',
   }[p.estado_pago];
   const estadoLabel = { pendiente: 'Sin pagar', anticipo: 'Anticipo', pagado: 'Pagado' }[p.estado_pago];
 
+  const siguienteStyle = p.status === 'tomado'
+    ? 'bg-marca-azul hover:opacity-90 text-white'
+    : 'bg-marca-verde hover:opacity-90 text-white';
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      {/* Barra de color */}
+      {/* Barra de color — header */}
       <div className={`${barColor} flex items-center justify-between px-3 py-1.5`}>
         <div className="flex items-center gap-1.5">
           {dragHandleProps && (
@@ -655,101 +649,144 @@ function Tarjeta({ p, onAvanzar, onEditar, onEliminar, dragHandleProps }: {
           )}
           <span className="text-white text-xs font-bold tracking-wide">{p.folio}</span>
           {p.dificil === 1 && (
-            <span className="bg-marca-naranja text-white text-xs font-bold px-1.5 py-0.5 rounded leading-none">!</span>
+            <span className="bg-white/20 text-white text-xs font-bold px-1.5 py-0.5 rounded leading-none tracking-wide">DIFÍCIL</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button type="button" onClick={() => imprimirPendiente(p)} title="Imprimir orden"
-            className="text-white/70 hover:text-white transition-colors">
-            <Printer size={15} />
+            className="text-white/70 hover:text-white transition-colors p-1">
+            <Printer size={14} />
           </button>
           <button type="button" onClick={onEditar} title="Editar"
-            className="text-white/70 hover:text-white transition-colors">
-            <Settings size={15} />
+            className="text-white/70 hover:text-white transition-colors p-1">
+            <Settings size={14} />
           </button>
+          {/* Separador visual antes de eliminar */}
+          <span className="w-px h-3.5 bg-white/25 mx-0.5" />
           <button type="button" onClick={onEliminar} title="Eliminar"
-            className="text-white/70 hover:text-white transition-colors">
-            <X size={17} />
+            className="text-white/35 hover:text-white/80 transition-colors p-1">
+            <X size={14} />
           </button>
         </div>
       </div>
 
-      {/* Contenido */}
-      <div className="p-4 space-y-2.5">
-      <div className="min-w-0">
-        <CopyWhatsApp numero={p.whatsapp} />
-        {p.nombre && <p className="text-sm text-gray-500">{p.nombre}</p>}
-      </div>
-
-      {/* Tipos de trabajo */}
-      {tipos.length > 0 && (
-        <div className="flex flex-wrap gap-1">
-          {tipos.map((t) => (
-            <span key={t} className="text-sm bg-gray-100 text-gray-600 rounded px-2 py-0.5">
-              {TIPOS_TRABAJO.find((x) => x.value === t)?.label ?? t}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Detalles */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-        {p.fecha_entrega && (
-          <span className="flex items-center gap-1.5">
-            <Calendar size={14} />
-            Fecha de entrega: {new Date(p.fecha_entrega).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-          </span>
-        )}
-        {p.juegos != null && <span className="flex items-center gap-1.5"><Layers size={14} />{p.juegos} juego{p.juegos !== 1 ? 's' : ''}</span>}
-        {p.copias_total != null && <span className="flex items-center gap-1.5"><Printer size={14} />~{p.copias_total} impresiones aprox.</span>}
-        {p.metodo_pago_pendiente && (
-          <span className="flex items-center gap-1.5 capitalize">
-            <Banknote size={14} />
-            {p.metodo_pago_pendiente}
-          </span>
-        )}
-        {p.factura === 1 && (
-          <span className="flex items-center gap-1.5 font-medium text-marca-azul">
-            <Receipt size={14} />
-            Factura
-          </span>
-        )}
-      </div>
-
-      {/* Instrucciones adicionales */}
-      {p.instrucciones_adicionales && (
-        <p className="text-sm text-gray-600 leading-snug italic">{p.instrucciones_adicionales}</p>
-      )}
-
-      {/* Countdown */}
-      {countdown && (
-        <p className={`text-sm font-semibold flex items-center gap-1.5 ${countdown.color}`}>
-          <Timer size={14} /> {countdown.texto}
-        </p>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between pt-0.5 flex-wrap gap-1">
+      {/* Sección WhatsApp — prominente */}
+      <div className="px-3 pt-3 pb-2.5 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-medium px-2 py-0.5 rounded-md border ${estadoBadge}`}>{estadoLabel}</span>
-          {p.estado_pago === 'anticipo' && restante !== null && (
-            <span className="text-xs text-gray-500">Resta: <strong>${restante.toFixed(2)}</strong></span>
-          )}
-          {p.monto != null && p.estado_pago === 'pendiente' && (
-            <span className="text-xs font-medium text-gray-700">${p.monto.toFixed(2)}</span>
-          )}
-          {p.estado_pago === 'pagado' && p.monto != null && (
-            <span className="text-xs font-medium text-gray-700">${p.monto.toFixed(2)}</span>
+          <span className="font-bold text-gray-900 text-xl leading-tight tracking-wide">{p.whatsapp}</span>
+          <button type="button" onClick={copiarWA} title="Copiar número"
+            className="text-gray-400 hover:text-gray-600 transition-colors shrink-0">
+            {waCopiado ? <Check size={15} className="text-green-500" /> : <Copy size={15} />}
+          </button>
+        </div>
+        {p.nombre && <p className="text-sm text-gray-500 mt-0.5 leading-tight">{p.nombre}</p>}
+      </div>
+
+      {/* Cuerpo */}
+      <div className="px-3 pt-2.5 pb-3 flex flex-col gap-3">
+        {/* Bloque operativo: tipos + juegos/copias agrupados */}
+        {(tipos.length > 0 || p.juegos != null || p.copias_total != null) && (
+          <div className="flex flex-col gap-1.5">
+            {tipos.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {tipos.map((t) => (
+                  <span key={t} className="text-xs bg-gray-100 text-gray-600 rounded-md px-2 py-0.5 font-medium">
+                    {TIPOS_TRABAJO.find((x) => x.value === t)?.label ?? t}
+                  </span>
+                ))}
+              </div>
+            )}
+            {(p.juegos != null || p.copias_total != null) && (
+              <div className="flex gap-4">
+                {p.juegos != null && (
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                    <Layers size={13} className="text-gray-400" />
+                    {p.juegos} juego{p.juegos !== 1 ? 's' : ''}
+                  </span>
+                )}
+                {p.copias_total != null && (
+                  <span className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
+                    <Printer size={13} className="text-gray-400" />
+                    ~{p.copias_total} copias
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Detalles secundarios */}
+        {(p.fecha_entrega || p.metodo_pago_pendiente || p.factura === 1) && (
+          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+            {p.fecha_entrega && (
+              <span className="flex items-center gap-1">
+                <Calendar size={12} />
+                {new Date(p.fecha_entrega).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {p.metodo_pago_pendiente && (
+              <span className="flex items-center gap-1 capitalize">
+                <Banknote size={12} />
+                {p.metodo_pago_pendiente}
+              </span>
+            )}
+            {p.factura === 1 && (
+              <span className="flex items-center gap-1 font-medium text-marca-azul">
+                <Receipt size={12} />
+                Factura
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Instrucciones adicionales — caja ámbar con ícono */}
+        {p.instrucciones_adicionales && (
+          <div className="flex gap-2 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2">
+            <MessageSquare size={13} className="text-amber-400 shrink-0 mt-px" />
+            <p className="text-xs text-amber-900 leading-snug">{p.instrucciones_adicionales}</p>
+          </div>
+        )}
+
+        {/* Countdown — pastilla coloreada, con más aire */}
+        {countdown && (
+          <div className="pt-0.5">
+            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${countdownPillCls}`}>
+              <Timer size={11} /> {countdown.texto}
+            </span>
+          </div>
+        )}
+
+        {/* Footer: pago + atribución */}
+        <div className="flex items-center justify-between flex-wrap gap-1 pt-0.5">
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-md border ${estadoBadge}`}>{estadoLabel}</span>
+            {p.estado_pago === 'anticipo' && restante !== null && (
+              <span className="text-xs text-gray-500">Resta: <strong className="text-gray-700">${restante.toFixed(2)}</strong></span>
+            )}
+            {p.monto != null && p.estado_pago !== 'anticipo' && (
+              <span className={`text-xs font-semibold ${p.estado_pago === 'pendiente' ? 'text-marca-naranja' : 'text-gray-600'}`}>
+                ${p.monto.toFixed(2)}
+              </span>
+            )}
+          </div>
+          {p.tomado_por && (
+            <span className="text-xs text-gray-400 flex items-center gap-1">
+              <User size={11} />
+              {p.tomado_por}
+            </span>
           )}
         </div>
-        {siguiente && (
+      </div>
+
+      {/* Botón de avanzar — full width, al fondo */}
+      {siguiente && (
+        <div className="px-3 pb-3">
           <button type="button" onClick={onAvanzar}
-            className="text-xs font-semibold text-marca-azul hover:opacity-70">
-            <span className="flex items-center gap-1">{siguiente} <ArrowRight size={12} /></span>
+            className={`w-full py-2 rounded-lg text-sm font-semibold transition-opacity flex items-center justify-center gap-1.5 ${siguienteStyle}`}>
+            {siguiente} <ArrowRight size={14} />
           </button>
-        )}
-      </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
