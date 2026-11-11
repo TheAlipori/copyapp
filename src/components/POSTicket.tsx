@@ -344,21 +344,21 @@ export default function POSTicket() {
     <title>Ticket ${ultimoFolio}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: 'Courier New', monospace; font-size: 20px; width: 5.5in; padding: 0.4in; }
-      .sub { text-align: center; font-size: 16px; color: #555; margin-bottom: 4px; }
-      .folio { text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 4px; }
-      .fecha { text-align: center; font-size: 16px; margin-bottom: 10px; }
-      hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
-      .item { display: flex; justify-content: space-between; margin-bottom: 5px; }
-      .item-desc { flex: 1; padding-right: 8px; font-size: 19px; }
-      .item-price { font-size: 19px; white-space: nowrap; }
-      .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 28px; margin: 6px 0; }
-      .pago-row { display: flex; justify-content: space-between; font-size: 19px; margin: 3px 0; }
-      .footer { text-align: center; font-size: 16px; margin-top: 14px; color: #555; }
-      @media print { @page { size: 5.5in 8.5in; margin: 0; } body { padding: 0.4in; } }
+      body { font-family: 'Consolas', 'Lucida Console', 'Courier New', monospace; font-size: 21px; width: 70mm; padding: 3mm 0; }
+      .sub { text-align: center; font-size: 19px; color: #444; margin-bottom: 3px; }
+      .folio { text-align: center; font-weight: bold; font-size: 23px; margin-bottom: 3px; }
+      .fecha { text-align: center; font-size: 19px; margin-bottom: 8px; }
+      hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+      .item { display: flex; justify-content: space-between; margin-bottom: 4px; }
+      .item-desc { flex: 1; padding-right: 6px; font-size: 20px; line-height: 1.3; }
+      .item-price { font-size: 20px; white-space: nowrap; font-weight: bold; }
+      .total-row { display: flex; justify-content: space-between; font-weight: bold; font-size: 28px; margin: 5px 0; }
+      .pago-row { display: flex; justify-content: space-between; font-size: 20px; margin: 2px 0; }
+      .footer { text-align: center; font-size: 19px; margin-top: 10px; color: #444; }
+      @media print { @page { size: 80mm auto; margin: 0 5mm; } body { width: 100%; padding: 3mm 0; } }
     </style></head><body>
     <div style="text-align:center;margin-bottom:6px;">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1119.76 216.34" style="width:160px;height:auto;display:inline-block;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1119.76 216.34" style="width:120px;height:auto;display:inline-block;">
         <defs><style>.t1{fill:#000}.t2{fill:#fff;stroke:#000;stroke-miterlimit:10;stroke-width:3px}.t3{fill:#000}</style></defs>
         <g transform="translate(0 -8.21)">
           <path class="t1" d="M108.17,8.21A108.17,108.17,0,1,0,216.34,116.38,108.17,108.17,0,0,0,108.17,8.21ZM11,95.18C22,42.69,77.31-4.22,148.52,25.94c23.53,10,40.82,27.43,51.64,50.89a49.07,49.07,0,0,1,4.71,21.51c-2.59-1.21-4.61-2-6.47-3Q174.67,81.75,151,68.11c-12.81-7.35-26-13.67-40.87-15.63-15.45-2-29.14,2-41,12C55.51,76,47.36,90.91,42.35,107.81c-.92,3.11.91,3.83,2.95,4.83q35,17.25,69.93,34.54c.88.43,1.71,1,2.86,1.63-15.36,16.58-33.89,24-56,21.17C24.65,165.19,3,133.69,11,95.18Zm58.29,113A23.33,23.33,0,0,1,59,204.91c-19.28-11.71-33.06-28.43-42.9-48.59a10.2,10.2,0,0,1-.25-2.2A76.46,76.46,0,0,0,62.19,176.2c22.3,2.51,41.6-4.29,57-20.79,10.42-11.17,14.73-24.73,11.92-40-2.25-12.22-12.26-20.21-25.12-20.83-11.84-.58-24.06,7.59-27.24,18.2C96,99.52,105.47,98.18,116.31,107.5c8.61,7.42,10.58,20.57,4.58,31.79L52.48,106.17c7-30.21,38.26-53.41,69.41-42,12.16,4.46,20.8,13,27,24.22C172.1,130.18,153.32,182,108,201.3A85.1,85.1,0,0,1,69.33,208.13Zm62.15,5.68c-11.94,3.2-23.27,3.33-38.31.28,30.71-5.9,50.82-24.36,64.69-50.34,14.39-27,10.13-54.13-.94-81.67a21.19,21.19,0,0,1,3.08,1c14.67,8.07,29.37,16.1,43.94,24.36a6.54,6.54,0,0,1,3,4.58C208.35,160,177.46,201.53,131.48,213.81Z"/>
@@ -398,6 +398,11 @@ export default function POSTicket() {
     <div class="pago-row"><span>Cambio</span><span>${cambioStr}</span></div>` : ''}
     <hr/>
     <div class="footer">¡Gracias por tu preferencia!</div>
+    <hr/>
+    <div style="text-align:center;margin-top:8px;">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=https%3A%2F%2Fwa.me%2F526183006203" width="130" height="130" style="display:inline-block;"/>
+      <div style="font-size:15px;margin-top:5px;line-height:1.4;">Envía tus pedidos por WhatsApp<br/>y solo pasa a recogerlos</div>
+    </div>
     <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); }<\/script>
     </body></html>`;
 
